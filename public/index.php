@@ -238,25 +238,49 @@ switch ($page) {
 
     case 'settings':
         $saved = false;
+        $flash = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $fields = [
-                'site_name', 'timezone', 'sync_time', 'cron_token',
-                'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
-                'facebook_page_token', 'facebook_page_id',
-                'linkedin_access_token', 'linkedin_org_urn',
-                'twitter_bearer_token', 'twitter_user_id',
-                'youtube_api_key', 'youtube_channel_id',
-            ];
-            foreach ($fields as $f) {
-                if (array_key_exists($f, $_POST)) {
-                    Settings::set($f, trim($_POST[$f]) ?: null);
+            if (($_POST['action'] ?? '') === 'clear_data') {
+                // Wipe all report data (demo or otherwise); settings/credentials stay.
+                foreach (['content_metrics', 'content_items', 'gsc_daily', 'gsc_queries', 'gsc_pages',
+                          'ga_daily', 'ga_channels', 'ga_pages', 'social_daily', 'social_posts',
+                          'campaign_metrics', 'campaigns', 'keyword_rankings', 'keywords',
+                          'email_campaigns'] as $table) {
+                    DB::run("DELETE FROM {$table}");
                 }
+                Settings::set('demo_mode', '0');
+                $flash = '✓ All report data deleted. Every report now shows 0 until the API sync or your imports fill it with real data. Run a sync from the button below.';
+            } else {
+                $fields = [
+                    'site_name', 'timezone', 'sync_time', 'cron_token',
+                    'brand_logo', 'brand_logo_url', 'accent_color',
+                    'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
+                    'facebook_page_token', 'facebook_page_id',
+                    'linkedin_access_token', 'linkedin_org_urn',
+                    'twitter_bearer_token', 'twitter_user_id',
+                    'youtube_api_key', 'youtube_channel_id',
+                ];
+                foreach ($fields as $f) {
+                    if (array_key_exists($f, $_POST)) {
+                        Settings::set($f, trim($_POST[$f]) ?: null);
+                    }
+                }
+                if (isset($_POST['nav_form'])) {
+                    $visible = (array) ($_POST['nav_visible'] ?? []);
+                    $allKeys = [];
+                    foreach (nav_structure() as $items) {
+                        $allKeys = array_merge($allKeys, array_keys($items));
+                    }
+                    $hidden = array_values(array_diff($allKeys, $visible, ['settings']));
+                    Settings::set('nav_hidden', json_encode($hidden));
+                }
+                $saved = true;
             }
-            $saved = true;
         }
         render('settings', $common + [
             'title'   => 'Settings',
             'saved'   => $saved,
+            'flash'   => $flash,
             'log'     => DB::all('SELECT * FROM sync_log ORDER BY id DESC LIMIT 30'),
         ]);
         break;

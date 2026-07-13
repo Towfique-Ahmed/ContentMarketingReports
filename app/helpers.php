@@ -107,6 +107,52 @@ function chart_json(array $data): string
     return h(json_encode($data));
 }
 
+/**
+ * Canonical sidebar structure: section label => [key => [label, url, page, subKey]].
+ * Keys are stable identifiers used by the show/hide preferences in Settings.
+ */
+function nav_structure(): array
+{
+    return [
+        '' => [
+            'overview' => ['Overview', '?page=dashboard', 'dashboard', null],
+        ],
+        'Content' => [
+            'blog'          => ['Blog', '?page=content&type=blog', 'content', 'blog'],
+            'documentation' => ['Documentation', '?page=content&type=documentation', 'content', 'documentation'],
+            'landing_pages' => ['Landing Pages', '?page=content&type=landing_page', 'content', 'landing_page'],
+            'case_studies'  => ['Case Studies', '?page=content&type=case_study', 'content', 'case_study'],
+        ],
+        'Acquisition' => [
+            'google_search'    => ['Google Search', '?page=search-console', 'search-console', null],
+            'google_analytics' => ['Google Analytics', '?page=analytics', 'analytics', null],
+            'keywords'         => ['Keywords', '?page=keywords', 'keywords', null],
+            'email'            => ['Email Marketing', '?page=email', 'email', null],
+        ],
+        'Social Media' => [
+            'social_all'      => ['All Platforms', '?page=social', 'social', ''],
+            'social_facebook' => ['Facebook', '?page=social&platform=facebook', 'social', 'facebook'],
+            'social_linkedin' => ['LinkedIn', '?page=social&platform=linkedin', 'social', 'linkedin'],
+            'social_twitter'  => ['X / Twitter', '?page=social&platform=twitter', 'social', 'twitter'],
+            'social_youtube'  => ['YouTube', '?page=social&platform=youtube', 'social', 'youtube'],
+        ],
+        'Reporting' => [
+            'campaigns' => ['Campaigns', '?page=campaigns', 'campaigns', null],
+            'compare'   => ['Compare', '?page=compare', 'compare', null],
+            'reports'   => ['Monthly & Yearly', '?page=reports', 'reports', null],
+            'data'      => ['Data Manager', '?page=data', 'data', null],
+            'settings'  => ['Settings & Sync', '?page=settings', 'settings', null],
+        ],
+    ];
+}
+
+/** Nav item keys hidden via Settings ('settings' can never be hidden). */
+function nav_hidden(): array
+{
+    $hidden = json_decode((string) \App\Core\Settings::get('nav_hidden', '[]'), true);
+    return is_array($hidden) ? array_values(array_diff($hidden, ['settings'])) : [];
+}
+
 /** Preserve current query string while overriding some params. */
 function url_with(array $overrides): string
 {

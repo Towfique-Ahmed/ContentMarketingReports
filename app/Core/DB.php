@@ -21,8 +21,14 @@ class DB
             self::$pdo->exec('PRAGMA journal_mode = WAL');
             self::migrate();
             if ($fresh) {
-                require_once dirname(__DIR__, 2) . '/database/seed_demo.php';
-                seed_demo(self::$pdo);
+                // Bootstrap default settings only — reports start at 0 until the
+                // API sync, CSV imports, or manual entries provide real data.
+                // Demo data is opt-in: php bin/seed.php --fresh
+                self::$pdo->exec("INSERT OR IGNORE INTO settings (key, value) VALUES
+                    ('site_name', 'Analytio'),
+                    ('sync_time', '06:00'),
+                    ('timezone', 'UTC'),
+                    ('cron_token', '" . bin2hex(random_bytes(16)) . "')");
             }
         }
         return self::$pdo;

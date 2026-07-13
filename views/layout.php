@@ -1,56 +1,57 @@
-<?php use App\Core\Settings; ?>
+<?php
+use App\Core\Settings;
+
+$siteName = Settings::get('site_name', 'Analytio');
+$logo     = Settings::get('brand_logo') ?: '📊';
+$logoUrl  = Settings::get('brand_logo_url');
+$accent   = Settings::get('accent_color');
+$accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= h($title ?? 'Reports') ?> · <?= h(Settings::get('site_name', 'Analytio')) ?></title>
+<title><?= h($title ?? 'Reports') ?> · <?= h($siteName) ?></title>
 <link rel="stylesheet" href="/assets/css/app.css">
+<?php if ($accentOk): ?>
+<style>
+:root {
+  --accent: <?= h($accent) ?>;
+  --accent-wash: color-mix(in srgb, <?= h($accent) ?> 12%, transparent);
+  --series-1: <?= h($accent) ?>;
+}
+</style>
+<?php endif; ?>
 <script src="/assets/js/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <span class="brand-mark">📊</span>
-      <span class="brand-name"><?= h(Settings::get('site_name', 'Analytio')) ?></span>
+      <?php if ($logoUrl): ?>
+        <img class="brand-mark" src="<?= h($logoUrl) ?>" alt="" style="height:22px; width:auto; border-radius:4px">
+      <?php else: ?>
+        <span class="brand-mark"><?= h($logo) ?></span>
+      <?php endif; ?>
+      <span class="brand-name"><?= h($siteName) ?></span>
     </div>
     <nav>
       <?php
-      $nav = [
-          ['dashboard',      'Overview',            '?page=dashboard'],
-          ['_head_content',  'Content',             null],
-          ['content',        'Blog',                '?page=content&type=blog',          'blog'],
-          ['content',        'Documentation',       '?page=content&type=documentation', 'documentation'],
-          ['content',        'Landing Pages',       '?page=content&type=landing_page',  'landing_page'],
-          ['content',        'Case Studies',        '?page=content&type=case_study',    'case_study'],
-          ['_head_acq',      'Acquisition',         null],
-          ['search-console', 'Google Search',       '?page=search-console'],
-          ['analytics',      'Google Analytics',    '?page=analytics'],
-          ['keywords',       'Keywords',            '?page=keywords'],
-          ['email',          'Email Marketing',     '?page=email'],
-          ['_head_social',   'Social Media',        null],
-          ['social',         'All Platforms',       '?page=social',                     ''],
-          ['social',         'Facebook',            '?page=social&platform=facebook',   'facebook'],
-          ['social',         'LinkedIn',            '?page=social&platform=linkedin',   'linkedin'],
-          ['social',         'X / Twitter',         '?page=social&platform=twitter',    'twitter'],
-          ['social',         'YouTube',             '?page=social&platform=youtube',    'youtube'],
-          ['_head_more',     'Reporting',           null],
-          ['campaigns',      'Campaigns',           '?page=campaigns'],
-          ['compare',        'Compare',             '?page=compare'],
-          ['reports',        'Monthly & Yearly',    '?page=reports'],
-          ['data',           'Data Manager',        '?page=data'],
-          ['settings',       'Settings & Sync',     '?page=settings'],
-      ];
-      $curSub = $_GET['type'] ?? $_GET['platform'] ?? null;
-      foreach ($nav as $item):
-          if ($item[2] === null): ?>
-            <div class="nav-head"><?= h($item[1]) ?></div>
-          <?php else:
-              $active = ($page === $item[0]) && (!isset($item[3]) || (string) $curSub === $item[3]);
-          ?>
-            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($item[2]) ?>"><?= h($item[1]) ?></a>
+      $hidden = nav_hidden();
+      $curSub = (string) ($_GET['type'] ?? $_GET['platform'] ?? '');
+      foreach (nav_structure() as $section => $items):
+          $visible = array_diff_key($items, array_flip($hidden));
+          if (!$visible) {
+              continue;
+          }
+          if ($section !== ''): ?>
+            <div class="nav-head"><?= h($section) ?></div>
           <?php endif;
+          foreach ($visible as [$label, $url, $navPage, $subKey]):
+              $active = ($page === $navPage) && ($subKey === null || $curSub === $subKey); ?>
+            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($url) ?>"><?= h($label) ?></a>
+          <?php endforeach;
       endforeach; ?>
     </nav>
     <?php if (Settings::get('demo_mode') === '1'): ?>

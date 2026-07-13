@@ -371,7 +371,7 @@ class DataSets
 
         // Find the header row (skips leading title rows in sheet exports)
         $columns = null;
-        while (($cells = fgetcsv($fh)) !== false) {
+        while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             $mapped = [];
             foreach ($cells as $i => $h) {
                 $key = self::normalizeHeader((string) $h);
@@ -393,7 +393,7 @@ class DataSets
         $skipped = 0;
         $errors = [];
         $line = 1;
-        while (($cells = fgetcsv($fh)) !== false) {
+        while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             $line++;
             $input = [];
             foreach ($columns as $i => $field) {
@@ -464,7 +464,7 @@ class DataSets
     }
 
     /** @return array<int, string> column index → Y-m-01, from a header row */
-    private static function monthColumns(array $cells): array
+    public static function monthColumns(array $cells): array
     {
         $months = [];
         foreach ($cells as $i => $cell) {
@@ -492,7 +492,7 @@ class DataSets
         }
         $months = [];
         $data   = []; // date → [col => value]
-        while (($cells = fgetcsv($fh)) !== false) {
+        while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             if (self::isBlankRow($cells)) {
                 $months = []; // section break — wait for the next month header
                 continue;
@@ -545,7 +545,7 @@ class DataSets
         $months = [];
         $ok = 0;
         $skipped = 0;
-        while (($cells = fgetcsv($fh)) !== false) {
+        while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             if (self::isBlankRow($cells)) {
                 $months = []; // section break — wait for the next month header
                 continue;

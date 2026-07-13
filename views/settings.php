@@ -3,6 +3,9 @@
 <?php if ($saved): ?>
 <div class="notice">✓ Settings saved.</div>
 <?php endif; ?>
+<?php if (!empty($flash)): ?>
+<div class="notice"><?= h($flash) ?></div>
+<?php endif; ?>
 
 <form method="post">
 <div class="form-grid">
@@ -26,6 +29,43 @@
       <input name="cron_token" value="<?= $s('cron_token') ?>">
       <div class="hint">Used by the <code class="inline">?page=cron&amp;token=…</code> endpoint for shared hosting.</div>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Branding</h2>
+    <div class="field">
+      <label>Logo (emoji or short text)</label>
+      <input name="brand_logo" value="<?= $s('brand_logo') ?>" placeholder="📊" maxlength="8">
+    </div>
+    <div class="field">
+      <label>Logo image URL (optional — overrides the emoji)</label>
+      <input name="brand_logo_url" value="<?= $s('brand_logo_url') ?>" placeholder="https://your-site.com/logo.png">
+      <div class="hint">Use a small square image (~44×44px works best).</div>
+    </div>
+    <div class="field">
+      <label>Accent color</label>
+      <input type="color" name="accent_color" value="<?= $s('accent_color') ?: '#2a78d6' ?>" style="height:38px; padding:2px; width:80px">
+      <div class="hint">Used for buttons, active nav, links and the primary chart series. Default is <code class="inline">#2a78d6</code>.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Sidebar — show / hide sections</h2>
+    <p class="hint" style="margin-bottom:10px">Untick anything your team doesn't use. Settings can't be hidden.</p>
+    <input type="hidden" name="nav_form" value="1">
+    <?php $hiddenNav = nav_hidden(); ?>
+    <?php foreach (nav_structure() as $section => $items): ?>
+      <?php if ($section !== ''): ?><div class="nav-head" style="padding-left:0"><?= h($section) ?></div><?php endif; ?>
+      <?php foreach ($items as $key => [$label]): ?>
+        <label style="display:inline-flex; align-items:center; gap:6px; margin:2px 14px 2px 0; font-size:13px">
+          <input type="checkbox" name="nav_visible[]" value="<?= h($key) ?>"
+                 <?= in_array($key, $hiddenNav, true) ? '' : 'checked' ?>
+                 <?= $key === 'settings' ? 'disabled checked' : '' ?>>
+          <?= h($label) ?>
+        </label>
+      <?php endforeach; ?>
+    <?php endforeach; ?>
+    <input type="hidden" name="nav_visible[]" value="settings">
   </div>
 
   <div class="card">
@@ -91,6 +131,19 @@
   <a class="btn btn-secondary" href="?page=sync-now" style="margin-left:8px">Run sync now</a>
 </p>
 </form>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Report data</h2>
+  <p class="hint" style="margin-bottom:10px">
+    The app ships with demo data so you can explore it. Once your real sources are connected
+    (or you're ready to import CSVs), wipe everything below — reports will show 0 until real
+    data arrives. Your settings and API credentials are kept.
+  </p>
+  <form method="post" onsubmit="return confirm('Delete ALL report data (demo and imported)? Settings and credentials are kept. This cannot be undone.')">
+    <input type="hidden" name="action" value="clear_data">
+    <button class="btn" type="submit" style="background: var(--bad)">Delete all report data</button>
+  </form>
+</div>
 
 <div class="card">
   <h2>Automatic daily sync — cron setup</h2>

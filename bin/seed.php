@@ -8,7 +8,8 @@
 
 if (!in_array('--fresh', $argv, true)) {
     echo "Usage: php bin/seed.php --fresh\n";
-    echo "Deletes storage/app.sqlite and rebuilds it with two years of demo data.\n";
+    echo "Deletes storage/app.sqlite and rebuilds it with two years of DEMO data.\n";
+    echo "(A normal first boot creates an EMPTY database — demo data is opt-in.)\n";
     exit(1);
 }
 
@@ -20,5 +21,7 @@ foreach ([$db, "$db-wal", "$db-shm"] as $f) {
 }
 
 require dirname(__DIR__) . '/app/bootstrap.php';
-\App\Core\DB::conn(); // recreates schema + demo data
-echo "Fresh demo database created at storage/app.sqlite\n";
+$pdo = \App\Core\DB::conn(); // recreates schema + default settings
+require dirname(__DIR__) . '/database/seed_demo.php';
+seed_demo($pdo);
+echo "Fresh DEMO database created at storage/app.sqlite\n";

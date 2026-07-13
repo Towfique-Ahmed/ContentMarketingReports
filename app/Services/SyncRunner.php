@@ -17,6 +17,7 @@ class SyncRunner
     {
         $results = [];
 
+        $results['content']        = self::guard(fn () => ContentSync::run());
         $results['search_console'] = self::guard(fn () => SearchConsoleSync::run());
         $results['analytics']      = self::guard(fn () => AnalyticsSync::run());
 
@@ -25,6 +26,7 @@ class SyncRunner
             self::log($platform, $status, $message);
         }
 
+        self::log('content', ...$results['content']);
         self::log('search_console', ...$results['search_console']);
         self::log('analytics', ...$results['analytics']);
 

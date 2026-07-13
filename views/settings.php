@@ -32,6 +32,26 @@
   </div>
 
   <div class="card">
+    <h2>Website — automatic content discovery</h2>
+    <div class="field">
+      <label>Website URL</label>
+      <input name="site_base_url" value="<?= $s('site_base_url') ?>" placeholder="https://xcloud.host">
+      <div class="hint">The daily sync auto-discovers published blogs, docs, case studies and landing pages
+        from this site (WordPress REST API, or XML sitemaps as fallback) and keeps the content inventory updated.</div>
+    </div>
+    <div class="field">
+      <label>Content URL rules (type=path, one per line)</label>
+      <textarea name="content_path_rules" style="min-height:80px" placeholder="blog=/blog/
+documentation=/docs/
+case_study=/case-study/
+landing_page=/features/"><?= $s('content_path_rules') ?></textarea>
+      <div class="hint">Used to classify pages by URL. Types: <code class="inline">blog</code>,
+        <code class="inline">documentation</code>, <code class="inline">case_study</code>,
+        <code class="inline">landing_page</code>.</div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Branding</h2>
     <div class="field">
       <label>Logo (emoji or short text)</label>

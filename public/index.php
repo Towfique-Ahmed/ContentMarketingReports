@@ -253,6 +253,7 @@ switch ($page) {
             } else {
                 $fields = [
                     'site_name', 'timezone', 'sync_time', 'cron_token',
+                    'site_base_url', 'content_path_rules',
                     'brand_logo', 'brand_logo_url', 'accent_color',
                     'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
                     'facebook_page_token', 'facebook_page_id',

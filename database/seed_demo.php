@@ -181,6 +181,25 @@ function seed_demo(PDO $pdo): void
                            "https://social.example/{$p}/post-{$i}", $im, $e, $c, $vv]);
     }
 
+    /* ---- Email campaigns ---- */
+    $emails = [
+        // days-ago, name, type, sent, delivered, opens, clicks, unsubs
+        [150, 'January Newsletter',          'Newsletter',           4200, 4100, 1640, 328, 12],
+        [137, 'Product Update Announcement', 'Product Announcement', 4250, 4160, 1830, 540,  9],
+        [122, 'February Newsletter',         'Newsletter',           4380, 4270, 1580, 300, 15],
+        [100, 'Beta Invite',                 'Product Announcement', 4400, 4300, 1935, 620,  7],
+        [ 80, 'March Newsletter',            'Newsletter',           4520, 4400, 1540, 280, 18],
+        [ 64, 'Testimonial Request',         'Testimonial Request',  2100, 2060,  990, 210,  4],
+        [ 45, 'Spring Promo',                'Promo',                4600, 4480, 1700, 510, 21],
+        [ 30, 'May Newsletter',              'Newsletter',           4700, 4580, 1600, 295, 16],
+        [ 12, 'Feature Deep-dive',           'Product Announcement', 4750, 4640, 1980, 585, 11],
+    ];
+    $insEmail = $pdo->prepare('INSERT INTO email_campaigns (date, name, type, sent, delivered, opens, clicks, unsubscribes) VALUES (?,?,?,?,?,?,?,?)');
+    foreach ($emails as [$ago, $name, $type, $sent, $del, $opens, $clicks, $unsub]) {
+        $insEmail->execute([$today->sub(new DateInterval("P{$ago}D"))->format('Y-m-d'),
+                            $name, $type, $sent, $del, $opens, $clicks, $unsub]);
+    }
+
     /* ---- Campaigns ---- */
     $campaigns = [
         ['Q3 Product Launch',        'Paid Search',  'active',    90, null, 24000, 0.9, 42],

@@ -28,6 +28,7 @@
           ['search-console', 'Google Search',       '?page=search-console'],
           ['analytics',      'Google Analytics',    '?page=analytics'],
           ['keywords',       'Keywords',            '?page=keywords'],
+          ['email',          'Email Marketing',     '?page=email'],
           ['_head_social',   'Social Media',        null],
           ['social',         'All Platforms',       '?page=social',                     ''],
           ['social',         'Facebook',            '?page=social&platform=facebook',   'facebook'],
@@ -38,6 +39,7 @@
           ['campaigns',      'Campaigns',           '?page=campaigns'],
           ['compare',        'Compare',             '?page=compare'],
           ['reports',        'Monthly & Yearly',    '?page=reports'],
+          ['data',           'Data Manager',        '?page=data'],
           ['settings',       'Settings & Sync',     '?page=settings'],
       ];
       $curSub = $_GET['type'] ?? $_GET['platform'] ?? null;
@@ -59,7 +61,7 @@
   <main class="main">
     <header class="topbar">
       <h1><?= h($title ?? '') ?></h1>
-      <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now'], true)): ?>
+      <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now', 'data'], true)): ?>
       <div class="range-picker">
         <?php foreach (['7d' => '7D', '30d' => '30D', '90d' => '90D', '12m' => '12M'] as $key => $label): ?>
           <a class="range-btn<?= ($_GET['range'] ?? '30d') === $key ? ' active' : '' ?>"

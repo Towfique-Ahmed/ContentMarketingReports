@@ -7,6 +7,7 @@
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 
+use App\Core\DataSets;
 use App\Core\DB;
 use App\Core\Reports;
 use App\Core\Settings;
@@ -132,6 +133,68 @@ switch ($page) {
             'rows'     => $rows,
             'selected' => $selected,
             'series'   => $series,
+        ]);
+        break;
+
+    case 'email':
+        render('email', $common + [
+            'title'   => 'Email Marketing',
+            'totals'  => Reports::emailTotals($start, $end),
+            'prev'    => Reports::emailTotals($prevStart, $prevEnd),
+            'monthly' => Reports::emailMonthly($start, $end),
+            'rows'    => Reports::emailTable($start, $end),
+        ]);
+        break;
+
+    case 'data':
+        $sets   = DataSets::all();
+        $setKey = isset($sets[$_GET['set'] ?? '']) ? $_GET['set'] : 'email_campaigns';
+        $setDef = $sets[$setKey];
+
+        if (!empty($_GET['template'])) {
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="' . $setKey . '_template.csv"');
+            echo DataSets::template($setKey);
+            exit;
+        }
+
+        $flash = null;
+        $importErrors = [];
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                switch ($_POST['action'] ?? '') {
+                    case 'add':
+                        DataSets::upsertRow($setKey, (array) ($_POST['f'] ?? []));
+                        $flash = '✓ Entry saved.';
+                        break;
+                    case 'import':
+                        if (empty($_FILES['csv']['tmp_name']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
+                            throw new RuntimeException('Upload failed — please choose a CSV file.');
+                        }
+                        $result = DataSets::importCsv($setKey, $_FILES['csv']['tmp_name'],
+                                                      ['measure' => $_POST['measure'] ?? 'sessions']);
+                        $flash = sprintf('✓ Import finished: %d rows imported/updated, %d skipped.',
+                                         $result['ok'], $result['skipped']);
+                        $importErrors = $result['errors'];
+                        break;
+                    case 'delete':
+                        DataSets::deleteRow($setKey, (int) ($_POST['rowid'] ?? 0));
+                        $flash = '✓ Row deleted.';
+                        break;
+                }
+            } catch (RuntimeException $e) {
+                $importErrors[] = $e->getMessage();
+            }
+        }
+
+        render('data', $common + [
+            'title'        => 'Data Manager',
+            'sets'         => $sets,
+            'setKey'       => $setKey,
+            'set'          => $setDef,
+            'flash'        => $flash,
+            'importErrors' => $importErrors,
+            'recent'       => DataSets::recentRows($setKey),
         ]);
         break;
 

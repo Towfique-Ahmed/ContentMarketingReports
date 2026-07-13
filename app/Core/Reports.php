@@ -221,6 +221,37 @@ class Reports
         );
     }
 
+    /* ---------- Email marketing ---------- */
+
+    public static function emailTotals(string $start, string $end): array
+    {
+        return DB::one(
+            'SELECT COUNT(*) campaigns, COALESCE(SUM(sent),0) sent, COALESCE(SUM(delivered),0) delivered,
+                    COALESCE(SUM(opens),0) opens, COALESCE(SUM(clicks),0) clicks,
+                    COALESCE(SUM(unsubscribes),0) unsubscribes
+             FROM email_campaigns WHERE date BETWEEN :s AND :e',
+            [':s' => $start, ':e' => $end]
+        ) ?? [];
+    }
+
+    public static function emailTable(string $start, string $end): array
+    {
+        return DB::all(
+            'SELECT date, name, type, sent, delivered, opens, clicks, unsubscribes, notes
+             FROM email_campaigns WHERE date BETWEEN :s AND :e ORDER BY date DESC',
+            [':s' => $start, ':e' => $end]
+        );
+    }
+
+    public static function emailMonthly(string $start, string $end): array
+    {
+        return DB::all(
+            "SELECT strftime('%Y-%m', date) ym, SUM(sent) sent, SUM(opens) opens, SUM(clicks) clicks
+             FROM email_campaigns WHERE date BETWEEN :s AND :e GROUP BY ym ORDER BY ym",
+            [':s' => $start, ':e' => $end]
+        );
+    }
+
     /* ---------- Monthly / yearly rollups ---------- */
 
     public static function monthlyRollup(int $year): array
@@ -303,6 +334,11 @@ class Reports
             'campaign_conv'      => ['Conversions (campaigns)',   'campaign_metrics', 'SUM(conversions)', false],
             'campaign_cost'      => ['Spend $ (campaigns)',       'campaign_metrics', 'SUM(cost)',       true],
             'campaign_revenue'   => ['Revenue $ (campaigns)',     'campaign_metrics', 'SUM(revenue)',    false],
+            'email_sent'         => ['Emails sent',               'email_campaigns', 'SUM(sent)',        false],
+            'email_opens'        => ['Email opens',               'email_campaigns', 'SUM(opens)',       false],
+            'email_clicks'       => ['Email clicks',              'email_campaigns', 'SUM(clicks)',      false],
+            'email_open_rate'    => ['Email open rate %',         'email_campaigns', '100.0*SUM(opens)/NULLIF(SUM(delivered),0)', false],
+            'email_unsubs'       => ['Email unsubscribes',        'email_campaigns', 'SUM(unsubscribes)', true],
         ];
     }
 

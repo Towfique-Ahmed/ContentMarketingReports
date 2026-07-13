@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= h($title ?? 'Reports') ?> · <?= h(Settings::get('site_name', 'Marketing Reports')) ?></title>
+<title><?= h($title ?? 'Reports') ?> · <?= h(Settings::get('site_name', 'Analytio')) ?></title>
 <link rel="stylesheet" href="/assets/css/app.css">
 <script src="/assets/js/chart.umd.min.js"></script>
 </head>
@@ -13,7 +13,7 @@
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-mark">📊</span>
-      <span class="brand-name"><?= h(Settings::get('site_name', 'Marketing Reports')) ?></span>
+      <span class="brand-name"><?= h(Settings::get('site_name', 'Analytio')) ?></span>
     </div>
     <nav>
       <?php

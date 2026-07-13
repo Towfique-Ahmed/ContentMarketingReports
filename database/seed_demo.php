@@ -11,7 +11,7 @@ function seed_demo(PDO $pdo): void
     mt_srand(42); // deterministic demo data
 
     $pdo->exec("INSERT OR REPLACE INTO settings (key, value) VALUES
-        ('site_name', 'Acme Marketing'),
+        ('site_name', 'Analytio'),
         ('sync_time', '06:00'),
         ('timezone', 'UTC'),
         ('demo_mode', '1'),

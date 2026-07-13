@@ -3,3 +3,4 @@ storage/*.sqlite-wal
 storage/*.sqlite-shm
 storage/*.log
 .DS_Store
+vendor/

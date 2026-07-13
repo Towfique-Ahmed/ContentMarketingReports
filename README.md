@@ -10,6 +10,7 @@ report it needs in one place:
 | **Google Analytics** | Dedicated page: sessions, users, new users, pageviews, engagement, duration, conversions, bounce, channels, top pages (GA4 Data API) |
 | **Keywords** | Tracked keyword rankings, position change, volume, difficulty, click/impression history |
 | **Social media** | Overview + per-platform pages for Facebook, LinkedIn, X/Twitter, YouTube — followers, impressions, engagements, clicks, video views, top posts |
+| **Email marketing** | Campaign sends with open/click/unsubscribe rates, monthly trends |
 | **Campaigns** | Budget, spend, impressions, clicks, CTR, conversions, CPA, revenue, ROAS per campaign with daily trends |
 | **Monthly & yearly** | Month-by-month and year-over-year rollups across all sources |
 | **Compare** | Any metric, any two date ranges, day-by-day overlay + all-metric delta table |
@@ -67,6 +68,34 @@ php bin/seed.php --fresh    # or just delete storage/app.sqlite
 - **X / Twitter**: an API v2 bearer token + your numeric user ID
   (follower counts on the free tier; impressions need a paid tier)
 - **YouTube**: a Data API key + channel ID
+
+## Three ways to get data in
+
+Every dataset supports all three input methods:
+
+1. **Automated** — the daily API sync (Search Console, GA4, social platforms;
+   see below).
+2. **In-app manual entry** — *Data Manager* in the sidebar has an add/update
+   form for every dataset (GA totals, channels, Search Console, content,
+   social, campaigns, keywords, email campaigns). Saving with the same key
+   updates the row.
+3. **CSV import** — upload a file on the same Data Manager page. Download the
+   per-dataset template for the expected columns. The importer is tolerant of
+   spreadsheet exports: it skips blank/padded rows, accepts `1,234`, `45.0%`
+   and `–`, finds the header row after title rows, and matches columns by
+   name with aliases (e.g. `Campaign` → name). Re-importing the same file is
+   safe (rows upsert by key).
+
+   Two special importers understand wide **month-matrix sheet exports**
+   (rows × `Jan'25, Feb'25, …` columns):
+   - *Search Console — monthly matrix*: reads the Clicks / Impressions /
+     CTR / Avg. position rows (other rows are ignored, so a whole report
+     export works).
+   - *GA channels — monthly matrix*: reads channel rows; you choose whether
+     the numbers are sessions, users, or conversions. Total rows are skipped.
+
+   Monthly figures are stored on the 1st of the month so the monthly and
+   yearly rollups aggregate them correctly.
 
 ## Automatic daily updates
 

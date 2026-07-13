@@ -168,6 +168,22 @@ CREATE TABLE IF NOT EXISTS keyword_rankings (
     UNIQUE(keyword_id, date)
 );
 
+-- Email marketing campaigns (one row per send)
+CREATE TABLE IF NOT EXISTS email_campaigns (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    date         TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    type         TEXT,
+    sent         INTEGER DEFAULT 0,
+    delivered    INTEGER DEFAULT 0,
+    opens        INTEGER DEFAULT 0,
+    clicks       INTEGER DEFAULT 0,
+    unsubscribes INTEGER DEFAULT 0,
+    notes        TEXT,
+    UNIQUE(date, name)
+);
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_date ON email_campaigns(date);
+
 -- Sync history
 CREATE TABLE IF NOT EXISTS sync_log (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,

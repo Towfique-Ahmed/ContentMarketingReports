@@ -53,6 +53,14 @@ class DataSets
                     'conversions' => ['type' => 'int', 'aliases' => ['key_events']],
                 ],
                 'row_filter' => 'channel_not_total',
+                // "Total"/"TOTAL" rollup rows in a long-format GA export are
+                // routed to the site-totals table instead of being dropped, so
+                // one channel export fills both the channel breakdown and the
+                // top-line Analytics numbers in a single upload.
+                'totals' => [
+                    'table'   => 'ga_daily',
+                    'columns' => ['sessions', 'users', 'new_users', 'conversions'],
+                ],
             ],
             'gsc_daily' => [
                 'label'  => 'Google Search Console — totals',
@@ -436,10 +444,15 @@ class DataSets
                     $input[$field] = $value;
                 }
             }
-            // Dataset-specific row filters (e.g. GA "Total" rollup rows)
+            // Dataset-specific row filters (e.g. GA "Total" rollup rows): route
+            // them to the site-totals table when configured, otherwise skip.
             if (($set['row_filter'] ?? '') === 'channel_not_total'
                 && strcasecmp(trim((string) ($input['channel'] ?? '')), 'total') === 0) {
-                $skipped++;
+                if (!empty($set['totals']) && self::upsertTotals($set['totals'], $input)) {
+                    $ok++;
+                } else {
+                    $skipped++;
+                }
                 continue;
             }
             try {
@@ -454,6 +467,50 @@ class DataSets
         }
         fclose($fh);
         return ['ok' => $ok, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Write a long-format "Total" rollup row to a site-totals table (keyed by
+     * date). Only columns actually present in the row are written, so it never
+     * zeroes metrics an earlier import stored. Returns true when a row was set.
+     *
+     * @param array{table: string, columns: list<string>} $cfg
+     * @param array<string, string|null>                   $input
+     */
+    private static function upsertTotals(array $cfg, array $input): bool
+    {
+        $date = self::cleanDate($input['date'] ?? null);
+        if (!$date) {
+            return false;
+        }
+        $vals = [];
+        foreach ($cfg['columns'] as $col) {
+            if (array_key_exists($col, $input)) {
+                $n = self::cleanNumber($input[$col] ?? null);
+                if ($n !== null) {
+                    $vals[$col] = (int) round($n);
+                }
+            }
+        }
+        if (!$vals) {
+            return false;
+        }
+        $cols   = array_merge(['date'], array_keys($vals));
+        $params = [':date' => $date];
+        foreach ($vals as $c => $v) {
+            $params[":{$c}"] = $v;
+        }
+        DB::run(
+            sprintf(
+                'INSERT INTO %s (%s) VALUES (%s) ON CONFLICT(date) DO UPDATE SET %s',
+                $cfg['table'],
+                implode(', ', $cols),
+                implode(', ', array_map(fn ($c) => ":{$c}", $cols)),
+                implode(', ', array_map(fn ($c) => "{$c} = excluded.{$c}", array_keys($vals)))
+            ),
+            $params
+        );
+        return true;
     }
 
     /** CSV template with headers + one example row. */

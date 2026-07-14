@@ -33,17 +33,12 @@ cd ContentMarketingReports
 php -S localhost:8000 -t public
 ```
 
-Open http://localhost:8000 — the first boot creates the database and fills it
-with **two years of demo data** so you can explore every report immediately.
+Open http://localhost:8000 — the first boot creates an **empty** database.
+Every report shows 0 until real data arrives, so connect your accounts in
+**Settings**, import CSVs, or add rows manually via the Data Manager (see below).
 
-When you're ready for real data, wipe the demo set:
-
-```bash
-php bin/seed.php --fresh    # or just delete storage/app.sqlite
-```
-
-…then connect your accounts in **Settings** (the demo banner disappears once
-`demo_mode` is cleared — save any settings form to keep your values).
+To start over at any time, use *Settings → Delete all report data* (or just
+delete `storage/app.sqlite`).
 
 ## Connecting real data sources
 
@@ -147,7 +142,7 @@ app/Core/        DB, Settings, Reports (query layer)
 app/Services/    GoogleClient (JWT auth), SearchConsoleSync, AnalyticsSync,
                  SocialSync, SyncRunner
 views/           page templates
-database/        schema.sql + demo seeder
-bin/             sync.php, scheduler.php, seed.php (CLI)
+database/        schema.sql
+bin/             sync.php, scheduler.php (CLI)
 storage/         SQLite database + WAL files (gitignored)
 ```

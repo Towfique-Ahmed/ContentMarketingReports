@@ -61,27 +61,48 @@ function delta_badge(float $current, float $previous, bool $lowerIsBetter = fals
  * Resolve the selected date range from ?range= / ?from= / ?to=.
  * Returns [start, end, previousStart, previousEnd, label].
  */
+/**
+ * Resolve the selected date range.
+ *
+ * The window's END is anchored to the latest data point (not today's
+ * calendar date), so whatever you add or import most recently is always
+ * inside the default view — data never "disappears" behind an empty
+ * trailing window when the data is monthly or lags real time.
+ *
+ * Returns [start, end, previousStart, previousEnd, label].
+ */
 function date_range(): array
 {
-    $range = $_GET['range'] ?? '30d';
-    $end   = date('Y-m-d', strtotime('-1 day'));
+    // Default to "All time" so every page shows all data out of the box.
+    $range  = $_GET['range'] ?? 'all';
+    $latest = \App\Core\Reports::latestDataDate();
+    $anchor = $latest ?: date('Y-m-d', strtotime('-1 day'));
 
     if ($range === 'custom' && !empty($_GET['from']) && !empty($_GET['to'])) {
         $start = $_GET['from'];
         $end   = $_GET['to'];
         $label = "$start → $end";
+    } elseif ($range === 'all') {
+        $earliest = \App\Core\Reports::earliestDataDate();
+        $start = $earliest ?: date('Y-m-d', strtotime('-12 months'));
+        $end   = $anchor;
+        $label = 'All time';
     } else {
         $days = match ($range) {
             '7d'  => 7,
+            '30d' => 30,
             '90d' => 90,
             '12m' => 365,
-            default => 30,
+            default => 90,
         };
-        $start = date('Y-m-d', strtotime("-{$days} days"));
+        // End at the latest data; start counts back from there.
+        $end   = $anchor;
+        $start = date('Y-m-d', strtotime("$end -" . ($days - 1) . ' days'));
         $label = match ($range) {
-            '7d' => 'Last 7 days', '90d' => 'Last 90 days',
-            '12m' => 'Last 12 months', default => 'Last 30 days',
-        };
+            '7d' => 'Last 7 days', '30d' => 'Last 30 days',
+            '90d' => 'Last 90 days', '12m' => 'Last 12 months',
+            default => 'Last 90 days',
+        } . ' (to ' . $end . ')';
     }
 
     $span      = max(1, (strtotime($end) - strtotime($start)) / 86400 + 1);

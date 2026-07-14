@@ -253,6 +253,42 @@ class Reports
         );
     }
 
+    /* ---------- Data extent (drives the date picker so it always shows data) ---------- */
+
+    /** Newest date across every date-bearing table, or null when empty. */
+    public static function latestDataDate(): ?string
+    {
+        $v = DB::value(
+            "SELECT MAX(d) FROM (
+                SELECT MAX(date) d FROM ga_daily
+                UNION ALL SELECT MAX(date) FROM gsc_daily
+                UNION ALL SELECT MAX(date) FROM social_daily
+                UNION ALL SELECT MAX(date) FROM email_campaigns
+                UNION ALL SELECT MAX(date) FROM campaign_metrics
+                UNION ALL SELECT MAX(published_at) FROM content_items
+                UNION ALL SELECT MAX(date) FROM keyword_rankings
+             )"
+        );
+        return $v ?: null;
+    }
+
+    /** Oldest date across every date-bearing table, or null when empty. */
+    public static function earliestDataDate(): ?string
+    {
+        $v = DB::value(
+            "SELECT MIN(d) FROM (
+                SELECT MIN(date) d FROM ga_daily
+                UNION ALL SELECT MIN(date) FROM gsc_daily
+                UNION ALL SELECT MIN(date) FROM social_daily
+                UNION ALL SELECT MIN(date) FROM email_campaigns
+                UNION ALL SELECT MIN(date) FROM campaign_metrics
+                UNION ALL SELECT MIN(published_at) FROM content_items
+                UNION ALL SELECT MIN(date) FROM keyword_rankings
+             ) WHERE d IS NOT NULL"
+        );
+        return $v ?: null;
+    }
+
     /* ---------- Month-by-month reports ---------- */
 
     /** All months (YYYY-MM) that have any data, newest first. */

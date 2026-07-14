@@ -61,8 +61,9 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
       <h1><?= h($title ?? '') ?></h1>
       <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now', 'data', 'monthly'], true)): ?>
       <div class="range-picker">
-        <?php foreach (['7d' => '7D', '30d' => '30D', '90d' => '90D', '12m' => '12M'] as $key => $label): ?>
-          <a class="range-btn<?= ($_GET['range'] ?? '30d') === $key ? ' active' : '' ?>"
+        <?php $curRange = $_GET['range'] ?? 'all';
+        foreach (['7d' => '7D', '30d' => '30D', '90d' => '90D', '12m' => '12M', 'all' => 'All'] as $key => $label): ?>
+          <a class="range-btn<?= $curRange === $key ? ' active' : '' ?>"
              href="<?= h(url_with(['range' => $key, 'from' => null, 'to' => null])) ?>"><?= $label ?></a>
         <?php endforeach; ?>
         <form method="get" class="range-custom">

@@ -52,6 +52,24 @@ landing_page=/features/"><?= $s('content_path_rules') ?></textarea>
   </div>
 
   <div class="card">
+    <h2>Content exclusions — per type</h2>
+    <p class="hint" style="margin-bottom:10px">
+      URLs matching these patterns are never added by the auto-discovery, and already-tracked
+      items that match are removed on the next sync. One pattern per line — plain text matches
+      anywhere in the URL, and <code class="inline">*</code> works as a wildcard
+      (e.g. <code class="inline">/tag/</code>, <code class="inline">*-old-*</code>).
+    </p>
+    <?php foreach (['blog' => 'Blog', 'documentation' => 'Documentation',
+                    'landing_page' => 'Landing Pages', 'case_study' => 'Case Studies'] as $ct => $ctLabel): ?>
+    <div class="field">
+      <label>Exclude from <?= h($ctLabel) ?></label>
+      <textarea name="content_exclude_<?= h($ct) ?>" style="min-height:52px"
+                placeholder="/tag/&#10;/author/"><?= $s('content_exclude_' . $ct) ?></textarea>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <div class="card">
     <h2>Branding</h2>
     <div class="field">
       <label>Logo (emoji or short text)</label>

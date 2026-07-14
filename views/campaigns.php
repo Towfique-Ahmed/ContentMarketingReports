@@ -48,7 +48,7 @@ $totClk  = array_sum(array_column($rows, 'clicks'));
         <th>Campaign</th><th>Channel</th><th>Status</th><th>Dates</th>
         <th class="num">Budget</th><th class="num">Spend</th><th class="num">Impressions</th>
         <th class="num">Clicks</th><th class="num">CTR</th><th class="num">Conv.</th>
-        <th class="num">CPA</th><th class="num">Revenue</th><th class="num">ROAS</th>
+        <th class="num">CPA</th><th class="num">Revenue</th><th class="num">ROAS</th><th></th>
       </tr>
       <?php foreach ($rows as $r): ?>
       <tr>
@@ -65,6 +65,7 @@ $totClk  = array_sum(array_column($rows, 'clicks'));
         <td class="num"><?= $r['conversions'] > 0 ? '$' . number_format($r['cost'] / $r['conversions'], 2) : '—' ?></td>
         <td class="num"><?= fmt_money($r['revenue']) ?></td>
         <td class="num"><?= $r['cost'] > 0 ? number_format($r['revenue'] / $r['cost'], 1) . 'x' : '—' ?></td>
+        <td class="num"><?= delete_button('campaigns', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; ?>
     </table>

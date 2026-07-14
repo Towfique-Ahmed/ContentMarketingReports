@@ -49,7 +49,7 @@ $prevClick = ($prev['delivered'] ?? 0) > 0 ? $prev['clicks'] / $prev['delivered'
         <th>Date</th><th>Campaign</th><th>Type</th>
         <th class="num">Sent</th><th class="num">Delivered</th><th class="num">Opens</th>
         <th class="num">Open rate</th><th class="num">Clicks</th><th class="num">Click rate</th>
-        <th class="num">Unsubs</th>
+        <th class="num">Unsubs</th><th></th>
       </tr>
       <?php foreach ($rows as $r):
           $or = $r['delivered'] > 0 ? $r['opens'] / $r['delivered'] * 100 : 0;
@@ -65,9 +65,10 @@ $prevClick = ($prev['delivered'] ?? 0) > 0 ? $prev['clicks'] / $prev['delivered'
         <td class="num"><?= fmt_num($r['clicks']) ?></td>
         <td class="num"><?= fmt_pct($cr) ?></td>
         <td class="num"><?= fmt_num($r['unsubscribes']) ?></td>
+        <td class="num"><?= delete_button('email_campaigns', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="10">No email campaigns in this range — add them in the <a href="?page=data&set=email_campaigns">Data Manager</a> (manual entry or CSV import).</td></tr>
+      <tr><td colspan="11">No email campaigns in this range — add them in the <a href="?page=data&set=email_campaigns">Data Manager</a> (manual entry or CSV import).</td></tr>
       <?php endif; ?>
     </table>
   </div>

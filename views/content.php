@@ -43,7 +43,7 @@ $totalConv = array_sum(array_column($rows, 'conversions'));
       <tr>
         <th>Title</th><th>Author</th><th>Published</th>
         <th class="num">Pageviews</th><th class="num">Visitors</th>
-        <th class="num">Avg time</th><th class="num">Bounce</th><th class="num">Conversions</th>
+        <th class="num">Avg time</th><th class="num">Bounce</th><th class="num">Conversions</th><th></th>
       </tr>
       <?php foreach ($rows as $r): ?>
       <tr>
@@ -55,9 +55,10 @@ $totalConv = array_sum(array_column($rows, 'conversions'));
         <td class="num"><?= fmt_duration($r['avg_time']) ?></td>
         <td class="num"><?= fmt_pct($r['bounce_rate']) ?></td>
         <td class="num"><?= fmt_num($r['conversions']) ?></td>
+        <td class="num"><?= delete_button('content_items', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="8">No <?= h(strtolower($types[$type])) ?> tracked yet.</td></tr>
+      <tr><td colspan="9">No <?= h(strtolower($types[$type])) ?> tracked yet.</td></tr>
       <?php endif; ?>
     </table>
   </div>

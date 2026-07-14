@@ -46,7 +46,7 @@ $totClk   = array_sum(array_map(fn ($r) => (int) $r['clicks'], $rows));
         <th>Keyword</th><th>Target page</th>
         <th class="num">Volume</th><th class="num">Difficulty</th>
         <th class="num">Position</th><th class="num">Change</th>
-        <th class="num">Clicks</th><th class="num">Impressions</th>
+        <th class="num">Clicks</th><th class="num">Impressions</th><th></th>
       </tr>
       <?php foreach ($rows as $r): ?>
       <tr>
@@ -66,9 +66,10 @@ $totClk   = array_sum(array_map(fn ($r) => (int) $r['clicks'], $rows));
         </td>
         <td class="num"><?= fmt_num($r['clicks']) ?></td>
         <td class="num"><?= fmt_num($r['impressions']) ?></td>
+        <td class="num"><?= delete_button('keywords', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="8">No keywords tracked yet — they sync automatically from Search Console query data.</td></tr>
+      <tr><td colspan="9">No keywords tracked yet — they sync automatically from Search Console query data.</td></tr>
       <?php endif; ?>
     </table>
   </div>

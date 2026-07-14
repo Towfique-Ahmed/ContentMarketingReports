@@ -153,6 +153,22 @@ function nav_hidden(): array
     return is_array($hidden) ? array_values(array_diff($hidden, ['settings'])) : [];
 }
 
+/**
+ * Inline ✕ delete button for a table row. Posts to the central delete-row
+ * endpoint and returns to the current page. Deleting a parent (content item,
+ * campaign, keyword) also removes its metrics via ON DELETE CASCADE.
+ */
+function delete_button(string $table, int $id): string
+{
+    $back = h($_SERVER['REQUEST_URI'] ?? '?page=dashboard');
+    return '<form method="post" action="?page=delete-row" class="inline-del"'
+        . ' onsubmit="return confirm(\'Delete this row? This cannot be undone.\')">'
+        . '<input type="hidden" name="table" value="' . h($table) . '">'
+        . '<input type="hidden" name="id" value="' . $id . '">'
+        . '<input type="hidden" name="back" value="' . $back . '">'
+        . '<button type="submit" title="Delete" aria-label="Delete">✕</button></form>';
+}
+
 /** Preserve current query string while overriding some params. */
 function url_with(array $overrides): string
 {

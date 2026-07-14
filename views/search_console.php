@@ -55,7 +55,7 @@
     <h2>Top search queries</h2>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Query</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr>
+        <tr><th>Query</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th><th></th></tr>
         <?php foreach ($queries as $q): ?>
         <tr>
           <td><span class="truncate"><?= h($q['query']) ?></span></td>
@@ -63,9 +63,10 @@
           <td class="num"><?= fmt_num($q['impressions']) ?></td>
           <td class="num"><?= fmt_pct($q['ctr']) ?></td>
           <td class="num"><?= number_format((float) $q['position'], 1) ?></td>
+          <td class="num"><?= delete_button('gsc_queries', (int) $q['id']) ?></td>
         </tr>
         <?php endforeach; if (!$queries): ?>
-        <tr><td colspan="5">No query data yet — run a sync from Settings.</td></tr>
+        <tr><td colspan="6">No query data yet — run a sync from Settings.</td></tr>
         <?php endif; ?>
       </table>
     </div>
@@ -74,7 +75,7 @@
     <h2>Top pages in search</h2>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Page</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr>
+        <tr><th>Page</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th><th></th></tr>
         <?php foreach ($pages as $p): ?>
         <tr>
           <td><a href="<?= h($p['page']) ?>" target="_blank" rel="noopener"><span class="truncate"><?= h(parse_url($p['page'], PHP_URL_PATH) ?: $p['page']) ?></span></a></td>
@@ -82,9 +83,10 @@
           <td class="num"><?= fmt_num($p['impressions']) ?></td>
           <td class="num"><?= fmt_pct($p['ctr']) ?></td>
           <td class="num"><?= number_format((float) $p['position'], 1) ?></td>
+          <td class="num"><?= delete_button('gsc_pages', (int) $p['id']) ?></td>
         </tr>
         <?php endforeach; if (!$pages): ?>
-        <tr><td colspan="5">No page data yet — run a sync from Settings.</td></tr>
+        <tr><td colspan="6">No page data yet — run a sync from Settings.</td></tr>
         <?php endif; ?>
       </table>
     </div>

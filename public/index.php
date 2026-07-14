@@ -254,6 +254,8 @@ switch ($page) {
                 $fields = [
                     'site_name', 'timezone', 'sync_time', 'cron_token',
                     'site_base_url', 'content_path_rules',
+                    'content_exclude_blog', 'content_exclude_documentation',
+                    'content_exclude_landing_page', 'content_exclude_case_study',
                     'brand_logo', 'brand_logo_url', 'accent_color',
                     'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
                     'facebook_page_token', 'facebook_page_id',
@@ -285,6 +287,21 @@ switch ($page) {
             'log'     => DB::all('SELECT * FROM sync_log ORDER BY id DESC LIMIT 30'),
         ]);
         break;
+
+    case 'delete-row':
+        $deletable = ['content_items', 'content_metrics', 'campaigns', 'campaign_metrics',
+                      'keywords', 'keyword_rankings', 'social_posts', 'social_daily',
+                      'email_campaigns', 'gsc_queries', 'gsc_pages', 'gsc_daily',
+                      'ga_daily', 'ga_channels', 'ga_pages'];
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['table'] ?? '', $deletable, true)) {
+            DB::run("DELETE FROM {$_POST['table']} WHERE rowid = :id", [':id' => (int) ($_POST['id'] ?? 0)]);
+        }
+        $back = (string) ($_POST['back'] ?? '');
+        if (!str_starts_with($back, '?') && !preg_match('#^/(?!/)#', $back)) {
+            $back = '?page=dashboard';
+        }
+        header('Location: ' . $back);
+        exit;
 
     case 'sync-now':
         $results = SyncRunner::runAll();

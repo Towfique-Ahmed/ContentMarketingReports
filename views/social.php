@@ -114,7 +114,7 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
     <h2>Recent posts</h2>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Date</th><th>Post</th><th class="num">Impressions</th><th class="num">Engagements</th><th class="num">Clicks</th><?= $platform === 'youtube' ? '<th class="num">Views</th>' : '' ?></tr>
+        <tr><th>Date</th><th>Post</th><th class="num">Impressions</th><th class="num">Engagements</th><th class="num">Clicks</th><?= $platform === 'youtube' ? '<th class="num">Views</th>' : '' ?><th></th></tr>
         <?php foreach ($posts as $post): ?>
         <tr>
           <td><?= h($post['posted_at']) ?></td>
@@ -123,9 +123,10 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
           <td class="num"><?= fmt_num($post['engagements']) ?></td>
           <td class="num"><?= fmt_num($post['clicks']) ?></td>
           <?= $platform === 'youtube' ? '<td class="num">' . fmt_num($post['video_views']) . '</td>' : '' ?>
+          <td class="num"><?= delete_button('social_posts', (int) $post['id']) ?></td>
         </tr>
         <?php endforeach; if (!$posts): ?>
-        <tr><td colspan="6">No posts tracked yet for this platform.</td></tr>
+        <tr><td colspan="7">No posts tracked yet for this platform.</td></tr>
         <?php endif; ?>
       </table>
     </div>

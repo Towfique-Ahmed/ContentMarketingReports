@@ -39,10 +39,49 @@ class ContentSync
             $found = self::viaSitemaps($base);
             $method = 'XML sitemaps';
         }
+        $purged = self::purgeExcluded();
         if ($found === 0) {
             throw new RuntimeException('no content discovered — the site exposes neither the WordPress REST API nor a sitemap, or the URL rules match nothing');
         }
-        return "discovered/updated {$found} content items via {$method}";
+        $note = $purged ? ", removed {$purged} excluded" : '';
+        return "discovered/updated {$found} content items via {$method}{$note}";
+    }
+
+    /* ---------------- Per-type URL exclusions ---------------- */
+
+    /** @return string[] exclusion patterns for a content type (Settings) */
+    private static function excludePatterns(string $type): array
+    {
+        $raw = (string) Settings::get("content_exclude_{$type}", '');
+        return array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $raw))));
+    }
+
+    /** True when the URL matches an exclusion pattern (substring, or * wildcard). */
+    public static function isExcluded(string $type, string $url): bool
+    {
+        foreach (self::excludePatterns($type) as $pattern) {
+            if (str_contains($pattern, '*')) {
+                if (fnmatch('*' . trim($pattern, '*') . '*', $url) || fnmatch($pattern, $url)) {
+                    return true;
+                }
+            } elseif (stripos($url, $pattern) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Delete already-stored items that now match an exclusion. @return int removed */
+    private static function purgeExcluded(): int
+    {
+        $removed = 0;
+        foreach (DB::all('SELECT id, type, url FROM content_items') as $item) {
+            if (self::isExcluded($item['type'], $item['url'])) {
+                DB::run('DELETE FROM content_items WHERE id = :id', [':id' => $item['id']]);
+                $removed++;
+            }
+        }
+        return $removed;
     }
 
     /** @return array<string, string> path prefix → content type, from Settings */
@@ -185,6 +224,9 @@ class ContentSync
 
     private static function upsertItem(string $type, string $title, string $url, ?string $publishedAt): void
     {
+        if (self::isExcluded($type, $url)) {
+            return;
+        }
         DB::run(
             'INSERT INTO content_items (type, title, url, author, published_at)
              VALUES (:t, :ti, :u, NULL, :p)

@@ -33,7 +33,7 @@ class Reports
     {
         $latest = DB::value('SELECT MAX(date) FROM gsc_queries');
         return $latest ? DB::all(
-            'SELECT query, clicks, impressions, ctr, position FROM gsc_queries
+            'SELECT id, query, clicks, impressions, ctr, position FROM gsc_queries
              WHERE date = :d ORDER BY clicks DESC LIMIT ' . (int) $limit,
             [':d' => $latest]
         ) : [];
@@ -43,7 +43,7 @@ class Reports
     {
         $latest = DB::value('SELECT MAX(date) FROM gsc_pages');
         return $latest ? DB::all(
-            'SELECT page, clicks, impressions, ctr, position FROM gsc_pages
+            'SELECT id, page, clicks, impressions, ctr, position FROM gsc_pages
              WHERE date = :d ORDER BY clicks DESC LIMIT ' . (int) $limit,
             [':d' => $latest]
         ) : [];
@@ -166,7 +166,7 @@ class Reports
     public static function socialPosts(string $platform, int $limit = 20): array
     {
         return DB::all(
-            'SELECT posted_at, title, url, impressions, engagements, clicks, video_views
+            'SELECT id, posted_at, title, url, impressions, engagements, clicks, video_views
              FROM social_posts WHERE platform = :p ORDER BY posted_at DESC LIMIT ' . (int) $limit,
             [':p' => $platform]
         );
@@ -237,7 +237,7 @@ class Reports
     public static function emailTable(string $start, string $end): array
     {
         return DB::all(
-            'SELECT date, name, type, sent, delivered, opens, clicks, unsubscribes, notes
+            'SELECT id, date, name, type, sent, delivered, opens, clicks, unsubscribes, notes
              FROM email_campaigns WHERE date BETWEEN :s AND :e ORDER BY date DESC',
             [':s' => $start, ':e' => $end]
         );

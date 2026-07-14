@@ -147,59 +147,84 @@ switch ($page) {
         break;
 
     case 'data':
-        $sets   = DataSets::all();
-        $setKey = isset($sets[$_GET['set'] ?? '']) ? $_GET['set'] : 'email_campaigns';
-        $setDef = $sets[$setKey];
+        // The single Data Manager page is gone — its controls now live on each
+        // report page. Old bookmarks land on the matching report.
+        $setToPage = [
+            'content_items' => 'content', 'content_metrics' => 'content',
+            'gsc_daily' => 'search-performance', 'gsc_monthly' => 'search-performance',
+            'ga_daily' => 'search-performance', 'ga_channels' => 'search-performance',
+            'ga_channels_monthly' => 'search-performance',
+            'social_daily' => 'social', 'social_posts' => 'social',
+            'campaigns' => 'campaigns', 'campaign_metrics' => 'campaigns',
+            'keywords' => 'keywords', 'keyword_rankings' => 'keywords',
+            'email_campaigns' => 'email',
+        ];
+        $dest = $setToPage[$_GET['set'] ?? ''] ?? 'content';
+        header('Location: ?page=' . $dest);
+        exit;
 
-        if (!empty($_GET['template'])) {
-            header('Content-Type: text/csv');
-            header('Content-Disposition: attachment; filename="' . $setKey . '_template.csv"');
-            echo DataSets::template($setKey);
-            exit;
+    case 'template':
+        $setKey = $_GET['set'] ?? '';
+        if (!DataSets::get($setKey)) {
+            http_response_code(404);
+            exit('Unknown dataset');
         }
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="' . $setKey . '_template.csv"');
+        echo DataSets::template($setKey);
+        exit;
 
-        $flash = null;
-        $importErrors = [];
+    case 'manage':
+        // Shared mutation handler for the per-page "Manage data" panels.
+        // Applies the change, then redirects back to the originating report
+        // with a flash message in the query string.
+        $back = (string) ($_POST['back'] ?? '');
+        if (!str_starts_with($back, '?') && !preg_match('#^/(?!/)#', $back)) {
+            $back = '?page=dashboard';
+        }
+        $msg = null;
+        $err = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 switch ($_POST['action'] ?? '') {
                     case 'add':
-                        DataSets::upsertRow($setKey, (array) ($_POST['f'] ?? []));
-                        $flash = '✓ Entry saved.';
+                        DataSets::upsertRow((string) ($_POST['set'] ?? ''), (array) ($_POST['f'] ?? []));
+                        $msg = '✓ Entry saved.';
                         break;
                     case 'import':
                         if (empty($_FILES['csv']['tmp_name']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
                             throw new RuntimeException('Upload failed — please choose a CSV file.');
                         }
-                        $importOptions = ['measure' => $_POST['measure'] ?? 'sessions'];
+                        $opts = ['measure' => $_POST['measure'] ?? 'sessions'];
                         if (!empty($_POST['default_type'])) {
-                            $importOptions['defaults'] = ['type' => $_POST['default_type']];
+                            $opts['defaults'] = ['type' => $_POST['default_type']];
                         }
-                        $result = DataSets::importCsv($setKey, $_FILES['csv']['tmp_name'], $importOptions);
-                        $flash = sprintf('✓ Import finished: %d rows imported/updated, %d skipped.',
-                                         $result['ok'], $result['skipped']);
-                        $importErrors = $result['errors'];
+                        $r = DataSets::importCsv((string) ($_POST['set'] ?? ''), $_FILES['csv']['tmp_name'], $opts);
+                        $msg = sprintf('✓ Import finished: %d rows imported/updated, %d skipped.', $r['ok'], $r['skipped']);
+                        if ($r['errors']) {
+                            $err = implode(' · ', $r['errors']);
+                        }
                         break;
-                    case 'delete':
-                        DataSets::deleteRow($setKey, (int) ($_POST['rowid'] ?? 0));
-                        $flash = '✓ Row deleted.';
+                    case 'save_settings':
+                        $allowed = allowed_settings();
+                        foreach ((array) ($_POST['s'] ?? []) as $key => $value) {
+                            if (in_array($key, $allowed, true)) {
+                                Settings::set($key, trim((string) $value) ?: null);
+                            }
+                        }
+                        $msg = '✓ Settings saved.';
                         break;
                 }
             } catch (RuntimeException $e) {
-                $importErrors[] = $e->getMessage();
+                $err = $e->getMessage();
             }
         }
-
-        render('data', $common + [
-            'title'        => 'Data Manager',
-            'sets'         => $sets,
-            'setKey'       => $setKey,
-            'set'          => $setDef,
-            'flash'        => $flash,
-            'importErrors' => $importErrors,
-            'recent'       => DataSets::recentRows($setKey),
-        ]);
-        break;
+        $q = http_build_query(array_filter(['msg' => $msg, 'err' => $err]));
+        if ($q !== '') {
+            $back .= (str_contains($back, '?') ? '&' : '?') . $q;
+        }
+        header('Location: ' . $back);
+        exit;
 
     case 'monthly':
         $months = Reports::monthsWithData();
@@ -345,19 +370,7 @@ switch ($page) {
                 }
                 $flash = '✓ All report data deleted. Every report now shows 0 until the API sync or your imports fill it with real data. Run a sync from the button below.';
             } else {
-                $fields = [
-                    'site_name', 'timezone', 'sync_time', 'cron_token', 'mcp_token',
-                    'site_base_url', 'content_path_rules', 'wp_username', 'wp_app_password',
-                    'content_exclude_blog', 'content_exclude_documentation',
-                    'content_exclude_landing_page', 'content_exclude_case_study',
-                    'brand_logo', 'brand_logo_url', 'accent_color',
-                    'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
-                    'facebook_page_token', 'facebook_page_id',
-                    'linkedin_access_token', 'linkedin_org_urn',
-                    'twitter_bearer_token', 'twitter_user_id',
-                    'youtube_api_key', 'youtube_channel_id',
-                ];
-                foreach ($fields as $f) {
+                foreach (allowed_settings() as $f) {
                     if (array_key_exists($f, $_POST)) {
                         Settings::set($f, trim($_POST[$f]) ?: null);
                     }
@@ -401,7 +414,43 @@ switch ($page) {
         exit;
 
     case 'sync-now':
-        $results = SyncRunner::runAll();
+        $source = $_POST['source'] ?? $_GET['source'] ?? '';
+        $results = ($source && in_array($source, SyncRunner::SOURCES, true))
+            ? SyncRunner::runOne($source)
+            : SyncRunner::runAll();
+
+        // Per-page sync buttons post a `back` URL: redirect there with a summary
+        // flash instead of the standalone results page.
+        $back = (string) ($_POST['back'] ?? '');
+        if ($back !== '' && (str_starts_with($back, '?') || preg_match('#^/(?!/)#', $back))) {
+            $ok = $skipped = $err = 0;
+            $notes = [];
+            foreach ($results as $name => [$status, $message]) {
+                if ($status === 'error') {
+                    $err++;
+                    $notes[] = "{$name}: {$message}";
+                } elseif ($status === 'skipped') {
+                    $skipped++;
+                    $notes[] = "{$name}: {$message}";
+                } else {
+                    $ok++;
+                }
+            }
+            if ($err > 0) {
+                $key = 'err';
+                $flash = "Sync ran with {$err} error(s): " . implode(' · ', array_slice($notes, 0, 3));
+            } elseif ($ok === 0 && $skipped > 0) {
+                $key = 'err';
+                $flash = 'Nothing synced — not configured yet: ' . implode(' · ', array_slice($notes, 0, 3));
+            } else {
+                $key = 'msg';
+                $flash = "✓ Sync complete — {$ok} source(s) updated"
+                    . ($skipped > 0 ? ", {$skipped} skipped (not configured)" : '') . '.';
+            }
+            $back .= (str_contains($back, '?') ? '&' : '?') . http_build_query([$key => $flash]);
+            header('Location: ' . $back);
+            exit;
+        }
         render('sync_result', $common + ['title' => 'Manual Sync', 'results' => $results]);
         break;
 

@@ -13,25 +13,65 @@ use Throwable;
  */
 class SyncRunner
 {
+    /** Sources that can be synced individually, in run order. */
+    public const SOURCES = ['content', 'search_console', 'analytics', 'social'];
+
     public static function runAll(): array
     {
         $results = [];
-
-        $results['content']        = self::guard(fn () => ContentSync::run());
-        $results['search_console'] = self::guard(fn () => SearchConsoleSync::run());
-        $results['analytics']      = self::guard(fn () => AnalyticsSync::run());
-
-        foreach (SocialSync::runAll() as $platform => [$status, $message]) {
-            $results[$platform] = [$status, $message];
-            self::log($platform, $status, $message);
+        foreach (self::SOURCES as $source) {
+            $results += self::runOne($source);
         }
-
-        self::log('content', ...$results['content']);
-        self::log('search_console', ...$results['search_console']);
-        self::log('analytics', ...$results['analytics']);
-
         Settings::set('last_sync_at', date('Y-m-d H:i:s'));
         return $results;
+    }
+
+    /**
+     * Run a single data source and log the outcome. 'social' fans out to every
+     * platform. Returns [source|platform => [status, message], …].
+     */
+    public static function runOne(string $source): array
+    {
+        $results = [];
+        if ($source === 'social') {
+            foreach (SocialSync::runAll() as $platform => [$status, $message]) {
+                $results[$platform] = [$status, $message];
+                self::log($platform, $status, $message);
+            }
+            self::log('social', ...self::rollup($results));
+            self::stamp('social');
+            return $results;
+        }
+
+        $runner = [
+            'content'        => fn () => ContentSync::run(),
+            'search_console' => fn () => SearchConsoleSync::run(),
+            'analytics'      => fn () => AnalyticsSync::run(),
+        ][$source] ?? null;
+        if (!$runner) {
+            return [$source => ['error', "unknown sync source: {$source}"]];
+        }
+        $results[$source] = self::guard($runner);
+        self::log($source, ...$results[$source]);
+        self::stamp($source);
+        return $results;
+    }
+
+    /** Collapse several platform results into one [status, message] summary. */
+    private static function rollup(array $results): array
+    {
+        $ok = $err = 0;
+        foreach ($results as [$status]) {
+            $status === 'error' ? $err++ : ($status === 'ok' ? $ok++ : null);
+        }
+        $status = $err > 0 ? ($ok > 0 ? 'ok' : 'error') : 'ok';
+        return [$status, sprintf('%d platform(s) synced, %d error(s)', $ok, $err)];
+    }
+
+    /** Record when a source last completed, for the per-page sync panels. */
+    private static function stamp(string $source): void
+    {
+        Settings::set('last_sync_' . $source, date('Y-m-d H:i:s'));
     }
 
     /** @return array{0: string, 1: string} [status, message] */

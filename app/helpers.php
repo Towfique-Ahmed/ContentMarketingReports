@@ -162,10 +162,135 @@ function nav_structure(): array
             'reports'   => ['Yearly Report', '?page=reports', 'reports', null],
             'campaigns' => ['Campaigns', '?page=campaigns', 'campaigns', null],
             'compare'   => ['Compare', '?page=compare', 'compare', null],
-            'data'      => ['Data Manager', '?page=data', 'data', null],
             'settings'  => ['Settings & Sync', '?page=settings', 'settings', null],
         ],
     ];
+}
+
+/**
+ * Every Settings key the app may write from a form. Shared by the Settings
+ * page and the per-page "Settings & sync" panels so both validate against the
+ * same allow-list (a form can never set an arbitrary key).
+ *
+ * @return list<string>
+ */
+function allowed_settings(): array
+{
+    return [
+        'site_name', 'timezone', 'sync_time', 'cron_token', 'mcp_token',
+        'site_base_url', 'content_path_rules', 'wp_username', 'wp_app_password',
+        'content_exclude_blog', 'content_exclude_documentation',
+        'content_exclude_landing_page', 'content_exclude_case_study',
+        'brand_logo', 'brand_logo_url', 'accent_color',
+        'google_service_account_json', 'gsc_site_url', 'ga4_property_id',
+        'facebook_page_token', 'facebook_page_id',
+        'linkedin_access_token', 'linkedin_org_urn',
+        'twitter_bearer_token', 'twitter_user_id',
+        'youtube_api_key', 'youtube_channel_id',
+    ];
+}
+
+/**
+ * Per-page data-management config: which datasets can be added/imported on a
+ * report page, which sync sources feed it, and which Settings fields belong
+ * to it. Drives the "Manage data" + "Settings & sync" panels rendered under
+ * each report. Returns null for pages that have no manageable data.
+ *
+ * @param string $page report page key (dashboard, content, …)
+ * @param string $sub  current sub-selection (content type or social platform)
+ */
+function page_manage_config(string $page, string $sub = ''): ?array
+{
+    $tf = fn (string $name, string $label, string $type = 'text', string $hint = '', string $ph = '')
+        => compact('name', 'label', 'type', 'hint', 'ph');
+
+    switch ($page) {
+        case 'content':
+            $excludeType = in_array($sub, ['blog', 'documentation', 'landing_page', 'case_study'], true) ? $sub : 'blog';
+            return [
+                'label'    => 'content',
+                'datasets' => ['content_items', 'content_metrics'],
+                'sync'     => ['content'],
+                'settings' => [
+                    $tf('site_base_url', 'Website URL', 'text',
+                        'The daily sync auto-discovers content from this site (WordPress REST API or XML sitemaps).', 'https://example.com'),
+                    $tf('wp_username', 'WordPress username (optional)'),
+                    $tf('wp_app_password', 'WordPress application password (optional)', 'password'),
+                    $tf('content_path_rules', 'Content URL rules (type=path, one per line)', 'textarea',
+                        'Classify pages by URL. Types: blog, documentation, case_study, landing_page.', "blog=/blog/\ndocumentation=/docs/"),
+                    $tf('content_exclude_' . $excludeType, 'Exclude URLs from this type (one pattern per line)', 'textarea',
+                        'Matching URLs are never added and existing matches are removed on the next sync. * is a wildcard.', "/tag/\n/author/"),
+                ],
+            ];
+        case 'search-performance':
+            return [
+                'label'    => 'search & analytics',
+                'datasets' => ['gsc_daily', 'gsc_monthly', 'ga_daily', 'ga_channels', 'ga_channels_monthly'],
+                'sync'     => ['search_console', 'analytics'],
+                'settings' => [
+                    $tf('google_service_account_json', 'Google service account JSON key', 'json',
+                        'One service account works for both Search Console and GA4.', '{ "type": "service_account", … }'),
+                    $tf('gsc_site_url', 'Search Console property URL', 'text', '', 'sc-domain:example.com or https://example.com/'),
+                    $tf('ga4_property_id', 'GA4 numeric property ID', 'text', '', '123456789'),
+                ],
+            ];
+        case 'keywords':
+            return [
+                'label'    => 'keywords',
+                'datasets' => ['keywords', 'keyword_rankings'],
+                'sync'     => ['search_console'],
+                'settings' => [
+                    $tf('gsc_site_url', 'Search Console property URL', 'text',
+                        'Tracked-keyword rankings are pulled from Search Console query data on each sync.', 'sc-domain:example.com'),
+                ],
+            ];
+        case 'social':
+            $platforms = [
+                'facebook' => [['facebook_page_token', 'Facebook page access token', 'password'], ['facebook_page_id', 'Facebook page ID']],
+                'linkedin' => [['linkedin_access_token', 'LinkedIn access token', 'password'], ['linkedin_org_urn', 'LinkedIn organization URN']],
+                'twitter'  => [['twitter_bearer_token', 'X / Twitter bearer token', 'password'], ['twitter_user_id', 'X / Twitter numeric user ID']],
+                'youtube'  => [['youtube_api_key', 'YouTube Data API key', 'password'], ['youtube_channel_id', 'YouTube channel ID']],
+            ];
+            $chosen = isset($platforms[$sub]) ? [$sub => $platforms[$sub]] : $platforms;
+            $settings = [];
+            foreach ($chosen as $rows) {
+                foreach ($rows as $r) {
+                    $settings[] = $tf($r[0], $r[1], $r[2] ?? 'text');
+                }
+            }
+            return [
+                'label'    => 'social',
+                'datasets' => ['social_daily', 'social_posts'],
+                'sync'     => ['social'],
+                'settings' => $settings,
+            ];
+        case 'campaigns':
+            return [
+                'label'    => 'campaigns',
+                'datasets' => ['campaigns', 'campaign_metrics'],
+                'sync'     => [],
+                'settings' => [],
+            ];
+        case 'email':
+            return [
+                'label'    => 'email',
+                'datasets' => ['email_campaigns'],
+                'sync'     => [],
+                'settings' => [],
+            ];
+    }
+    return null;
+}
+
+/** Human labels for sync sources. */
+function sync_source_label(string $source): string
+{
+    return [
+        'content'        => 'Website content',
+        'search_console' => 'Search Console',
+        'analytics'      => 'Google Analytics',
+        'social'         => 'Social platforms',
+    ][$source] ?? ucfirst($source);
 }
 
 /** Nav item keys hidden via Settings ('settings' can never be hidden). */

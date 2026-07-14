@@ -85,7 +85,18 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
     <div class="range-label"></div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['msg'])): ?>
+    <div class="notice"><?= h((string) $_GET['msg']) ?></div>
+    <?php endif; ?>
+    <?php if (!empty($_GET['err'])): ?>
+    <div class="notice" style="border-color: var(--bad)"><?= h((string) $_GET['err']) ?></div>
+    <?php endif; ?>
+
     <?= $content ?>
+
+    <?php if (isset($page) && page_manage_config((string) $page, (string) ($_GET['type'] ?? $_GET['platform'] ?? ''))): ?>
+      <?php include __DIR__ . '/_manage.php'; ?>
+    <?php endif; ?>
   </main>
 </div>
 <script src="/assets/js/app.js"></script>

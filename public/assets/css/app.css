@@ -177,6 +177,20 @@ table.data th .sort-link.active { color: var(--text-primary); }
   border-radius: 6px; background: var(--card); color: var(--text-primary);
 }
 
+/* ---- Per-page "Manage data" panel ---- */
+details.manage { border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+details.manage > summary {
+  cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 14px;
+  color: var(--text-secondary); list-style: none; user-select: none;
+}
+details.manage > summary::-webkit-details-marker { display: none; }
+details.manage > summary:hover { color: var(--accent); }
+details.manage[open] > summary { border-bottom: 1px solid var(--grid); }
+.manage-body { padding: 16px; }
+.manage-body .card { border: 1px solid var(--border); }
+.manage-sub { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 0 0 10px; }
+.sync-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
 /* ---- Badges ---- */
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px;

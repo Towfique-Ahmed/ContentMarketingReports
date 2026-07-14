@@ -184,6 +184,16 @@ CREATE TABLE IF NOT EXISTS email_campaigns (
 );
 CREATE INDEX IF NOT EXISTS idx_email_campaigns_date ON email_campaigns(date);
 
+-- Monthly report highlights & notes ("October at a Glance" style)
+CREATE TABLE IF NOT EXISTS monthly_notes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    month      TEXT NOT NULL,            -- YYYY-MM
+    category   TEXT NOT NULL DEFAULT 'highlight',
+    note       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_monthly_notes_month ON monthly_notes(month);
+
 -- Sync history
 CREATE TABLE IF NOT EXISTS sync_log (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,

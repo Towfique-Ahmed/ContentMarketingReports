@@ -45,6 +45,22 @@
         from this site (WordPress REST API, or XML sitemaps as fallback) and keeps the content inventory updated.</div>
     </div>
     <div class="field">
+      <label>WordPress username (optional)</label>
+      <input name="wp_username" value="<?= $s('wp_username') ?>" placeholder="your-wp-admin-user">
+    </div>
+    <div class="field">
+      <label>WordPress application password (optional)</label>
+      <input name="wp_app_password" value="<?= $s('wp_app_password') ?>" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
+      <div class="hint">
+        <strong>How to create:</strong> WP Admin → Users → Profile → scroll to
+        <em>Application Passwords</em> → name it "Analytio" → Add → copy the generated password here.
+        With credentials, the sync authenticates to the WordPress REST API — it works even when the
+        site restricts anonymous API access, and it also collects <strong>blog view counts</strong>
+        when a view-counter plugin (Post Views Counter, WP-PostViews, …) exposes them.
+        Never use your login password — application passwords can be revoked anytime.
+      </div>
+    </div>
+    <div class="field">
       <label>Content URL rules (type=path, one per line)</label>
       <textarea name="content_path_rules" style="min-height:80px" placeholder="blog=/blog/
 documentation=/docs/

@@ -48,9 +48,9 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
           if ($section !== ''): ?>
             <div class="nav-head"><?= h($section) ?></div>
           <?php endif;
-          foreach ($visible as [$label, $url, $navPage, $subKey, $icon]):
+          foreach ($visible as [$label, $url, $navPage, $subKey]):
               $active = ($page === $navPage) && ($subKey === null || $curSub === $subKey); ?>
-            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($url) ?>"><span class="nav-icon"><?= h($icon) ?></span><?= h($label) ?></a>
+            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($url) ?>"><?= h($label) ?></a>
           <?php endforeach;
       endforeach; ?>
     </nav>
@@ -59,7 +59,7 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
   <main class="main">
     <header class="topbar">
       <h1><?= h($title ?? '') ?></h1>
-      <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now', 'data'], true)): ?>
+      <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now', 'data', 'monthly'], true)): ?>
       <div class="range-picker">
         <?php foreach (['7d' => '7D', '30d' => '30D', '90d' => '90D', '12m' => '12M'] as $key => $label): ?>
           <a class="range-btn<?= ($_GET['range'] ?? '30d') === $key ? ' active' : '' ?>"
@@ -78,7 +78,11 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
       </div>
       <?php endif; ?>
     </header>
+    <?php if (!in_array($page, ['settings', 'compare', 'reports', 'sync-now', 'data', 'monthly'], true)): ?>
     <div class="range-label"><?= h($rangeLabel ?? '') ?><?= isset($prevStart) ? ' · compared with previous period' : '' ?></div>
+    <?php else: ?>
+    <div class="range-label"></div>
+    <?php endif; ?>
 
     <?= $content ?>
   </main>

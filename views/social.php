@@ -110,6 +110,28 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
     </div>
   </div>
 
+  <div class="card" style="margin-bottom:16px">
+    <h2>Recorded data points in this range</h2>
+    <div class="table-wrap" style="max-height:280px; overflow-y:auto">
+      <table class="data">
+        <tr><th>Date</th><th class="num">Followers</th><th class="num">Impressions</th><th class="num">Engagements</th><th class="num">Clicks</th><th class="num">Video views</th><th></th></tr>
+        <?php foreach (array_reverse($series) as $d): ?>
+        <tr>
+          <td style="white-space:nowrap"><?= h($d['date']) ?></td>
+          <td class="num"><?= fmt_num($d['followers']) ?></td>
+          <td class="num"><?= fmt_num($d['impressions']) ?></td>
+          <td class="num"><?= fmt_num($d['engagements']) ?></td>
+          <td class="num"><?= fmt_num($d['clicks']) ?></td>
+          <td class="num"><?= fmt_num($d['video_views']) ?></td>
+          <td class="num"><?= delete_button('social_daily', (int) $d['id']) ?></td>
+        </tr>
+        <?php endforeach; if (!$series): ?>
+        <tr><td colspan="7">No records in this range.</td></tr>
+        <?php endif; ?>
+      </table>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Recent posts</h2>
     <div class="table-wrap">

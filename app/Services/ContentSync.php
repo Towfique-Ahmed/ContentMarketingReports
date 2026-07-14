@@ -147,10 +147,11 @@ class ContentSync
     /** @param callable(string): ?string $typeFor returns content type or null to skip */
     private static function fetchRestItems(string $base, string $restBase, callable $typeFor): int
     {
-        $count = 0;
+        $count  = 0;
+        $fields = self::wpAuthHeader() ? 'link,title,date,meta' : 'link,title,date';
         for ($page = 1; $page <= 10; $page++) {
             $items = self::fetchJson(
-                "$base/wp-json/wp/v2/{$restBase}?per_page=100&page={$page}&status=publish&_fields=link,title,date"
+                "$base/wp-json/wp/v2/{$restBase}?per_page=100&page={$page}&status=publish&_fields={$fields}"
             );
             if (!is_array($items) || !array_is_list($items) || !$items) {
                 break;
@@ -163,6 +164,13 @@ class ContentSync
                 }
                 self::upsertItem($type, html_entity_decode($item['title']['rendered'] ?? '', ENT_QUOTES),
                                   $url, substr((string) ($item['date'] ?? ''), 0, 10));
+                // View counters (Post Views Counter, WP-PostViews, …) expose
+                // themselves as registered meta — pick up any numeric *view* key.
+                $views = self::viewsFromMeta((array) ($item['meta'] ?? []));
+                if ($views !== null) {
+                    DB::run('UPDATE content_items SET views = :v WHERE url = :u',
+                            [':v' => $views, ':u' => $url]);
+                }
                 $count++;
             }
             if (count($items) < 100) {
@@ -170,6 +178,30 @@ class ContentSync
             }
         }
         return $count;
+    }
+
+    /** Extract a view count from a WP REST meta object, if any plugin exposes one. */
+    private static function viewsFromMeta(array $meta): ?int
+    {
+        foreach ($meta as $key => $value) {
+            if (stripos((string) $key, 'view') !== false && is_numeric($value) && (int) $value > 0) {
+                return (int) $value;
+            }
+        }
+        return null;
+    }
+
+    /** Basic-auth header from Settings (WordPress username + application password). */
+    private static function wpAuthHeader(): ?string
+    {
+        $user = Settings::get('wp_username');
+        $pass = Settings::get('wp_app_password');
+        if (!$user || !$pass) {
+            return null;
+        }
+        // App passwords are shown with spaces (xxxx xxxx …) — both forms work,
+        // but strip them for consistency.
+        return 'Authorization: Basic ' . base64_encode($user . ':' . str_replace(' ', '', $pass));
     }
 
     /* ---------------- Sitemap fallback ---------------- */
@@ -239,6 +271,10 @@ class ContentSync
 
     private static function fetchRaw(string $url): ?string
     {
+        $headers = [];
+        if ($auth = self::wpAuthHeader()) {
+            $headers[] = $auth;
+        }
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -246,6 +282,7 @@ class ContentSync
             CURLOPT_MAXREDIRS      => 5,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; AnalytioContentSync/1.0)',
+            CURLOPT_HTTPHEADER     => $headers,
         ]);
         $body = curl_exec($ch);
         $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);

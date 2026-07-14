@@ -158,7 +158,7 @@ class Reports
     public static function socialSeries(string $platform, string $start, string $end): array
     {
         return DB::all(
-            'SELECT date, followers, impressions, engagements, clicks, video_views
+            'SELECT id, date, followers, impressions, engagements, clicks, video_views
              FROM social_daily WHERE platform = :p AND date BETWEEN :s AND :e ORDER BY date',
             [':p' => $platform, ':s' => $start, ':e' => $end]
         );
@@ -251,6 +251,85 @@ class Reports
              FROM email_campaigns WHERE date BETWEEN :s AND :e GROUP BY ym ORDER BY ym",
             [':s' => $start, ':e' => $end]
         );
+    }
+
+    /* ---------- Month-by-month reports ---------- */
+
+    /** All months (YYYY-MM) that have any data, newest first. */
+    public static function monthsWithData(): array
+    {
+        $rows = DB::all(
+            "SELECT DISTINCT m FROM (
+                SELECT strftime('%Y-%m', date) m FROM ga_daily
+                UNION SELECT strftime('%Y-%m', date) FROM gsc_daily
+                UNION SELECT strftime('%Y-%m', date) FROM social_daily
+                UNION SELECT strftime('%Y-%m', date) FROM email_campaigns
+                UNION SELECT strftime('%Y-%m', published_at) FROM content_items WHERE published_at IS NOT NULL
+                UNION SELECT strftime('%Y-%m', date) FROM campaign_metrics
+                UNION SELECT month FROM monthly_notes
+             ) WHERE m IS NOT NULL ORDER BY m DESC"
+        );
+        return array_column($rows, 'm');
+    }
+
+    /** [start, end] date bounds for a YYYY-MM month. */
+    public static function monthBounds(string $month): array
+    {
+        $start = $month . '-01';
+        return [$start, date('Y-m-t', strtotime($start))];
+    }
+
+    /** Cross-source summary for one month (used by the overview and detail). */
+    public static function monthSummary(string $month): array
+    {
+        [$s, $e] = self::monthBounds($month);
+        $ga    = self::gaTotals($s, $e);
+        $gsc   = self::gscTotals($s, $e);
+        $email = self::emailTotals($s, $e);
+        $social = DB::one(
+            'SELECT COALESCE(SUM(impressions),0) impressions, COALESCE(SUM(engagements),0) engagements
+             FROM social_daily WHERE date BETWEEN :s AND :e', [':s' => $s, ':e' => $e]
+        ) ?? ['impressions' => 0, 'engagements' => 0];
+        $campaign = DB::one(
+            'SELECT COALESCE(SUM(cost),0) cost, COALESCE(SUM(revenue),0) revenue,
+                    COALESCE(SUM(conversions),0) conversions
+             FROM campaign_metrics WHERE date BETWEEN :s AND :e', [':s' => $s, ':e' => $e]
+        ) ?? ['cost' => 0, 'revenue' => 0, 'conversions' => 0];
+        return [
+            'month'          => $month,
+            'sessions'       => (int) ($ga['sessions'] ?? 0),
+            'users'          => (int) ($ga['users'] ?? 0),
+            'new_users'      => (int) ($ga['new_users'] ?? 0),
+            'pageviews'      => (int) ($ga['pageviews'] ?? 0),
+            'conversions'    => (int) ($ga['conversions'] ?? 0),
+            'gsc_clicks'     => (int) ($gsc['clicks'] ?? 0),
+            'gsc_impressions'=> (int) ($gsc['impressions'] ?? 0),
+            'gsc_ctr'        => (float) ($gsc['ctr'] ?? 0),
+            'gsc_position'   => (float) ($gsc['position'] ?? 0),
+            'content_published' => (int) DB::value(
+                "SELECT COUNT(*) FROM content_items WHERE strftime('%Y-%m', published_at) = :m", [':m' => $month]),
+            'email_campaigns'=> (int) ($email['campaigns'] ?? 0),
+            'email_sent'     => (int) ($email['sent'] ?? 0),
+            'email_opens'    => (int) ($email['opens'] ?? 0),
+            'social_impressions' => (int) $social['impressions'],
+            'social_engagements' => (int) $social['engagements'],
+            'campaign_cost'      => (float) $campaign['cost'],
+            'campaign_revenue'   => (float) $campaign['revenue'],
+        ];
+    }
+
+    public static function monthContent(string $month): array
+    {
+        return DB::all(
+            "SELECT id, type, title, url, author, published_at, funnel_stage, target_keyword, views
+             FROM content_items WHERE strftime('%Y-%m', published_at) = :m ORDER BY published_at DESC",
+            [':m' => $month]
+        );
+    }
+
+    public static function monthNotes(string $month): array
+    {
+        return DB::all('SELECT id, category, note FROM monthly_notes WHERE month = :m ORDER BY id', [':m' => $month]);
     }
 
     /* ---------- Monthly / yearly rollups ---------- */

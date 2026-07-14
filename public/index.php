@@ -201,6 +201,98 @@ switch ($page) {
         ]);
         break;
 
+    case 'monthly':
+        $months = Reports::monthsWithData();
+        $month  = $_GET['month'] ?? null;
+        if ($month !== null && !preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $month = null;
+        }
+
+        // --- Month-page controls: add note, delete note, delete a source's month data ---
+        $flash = null;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $month) {
+            [$mStart, $mEnd] = Reports::monthBounds($month);
+            switch ($_POST['action'] ?? '') {
+                case 'add_note':
+                    $note = trim((string) ($_POST['note'] ?? ''));
+                    $cat  = in_array($_POST['category'] ?? '', ['highlight', 'release', 'content', 'social', 'email', 'other'], true)
+                          ? $_POST['category'] : 'highlight';
+                    if ($note !== '') {
+                        DB::run('INSERT INTO monthly_notes (month, category, note) VALUES (:m, :c, :n)',
+                                [':m' => $month, ':c' => $cat, ':n' => $note]);
+                        $flash = '✓ Note added.';
+                    }
+                    break;
+                case 'delete_month_source':
+                    $sources = [
+                        'analytics'      => ['ga_daily', 'ga_channels', 'ga_pages'],
+                        'search_console' => ['gsc_daily', 'gsc_queries', 'gsc_pages'],
+                        'social'         => ['social_daily'],
+                        'email'          => ['email_campaigns'],
+                        'campaigns'      => ['campaign_metrics'],
+                        'content_metrics'=> ['content_metrics'],
+                        'keywords'       => ['keyword_rankings'],
+                    ];
+                    $key = $_POST['source'] ?? '';
+                    if (isset($sources[$key])) {
+                        foreach ($sources[$key] as $table) {
+                            DB::run("DELETE FROM {$table} WHERE date BETWEEN :s AND :e",
+                                    [':s' => $mStart, ':e' => $mEnd]);
+                        }
+                        $flash = "✓ Deleted {$key} data for {$month}.";
+                    }
+                    break;
+            }
+            $months = Reports::monthsWithData(); // refresh after changes
+        }
+
+        // --- CSV export of one month's summary ---
+        if ($month && !empty($_GET['export'])) {
+            $summary = Reports::monthSummary($month);
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="report-' . $month . '.csv"');
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Metric', 'Value'], ',', '"', '');
+            foreach ($summary as $k => $v) {
+                fputcsv($out, [$k, $v], ',', '"', '');
+            }
+            foreach (Reports::monthNotes($month) as $n) {
+                fputcsv($out, ['note (' . $n['category'] . ')', $n['note']], ',', '"', '');
+            }
+            fclose($out);
+            exit;
+        }
+
+        if ($month) {
+            [$mStart, $mEnd] = Reports::monthBounds($month);
+            $prevMonth = date('Y-m', strtotime($mStart . ' -1 month'));
+            $nextMonth = date('Y-m', strtotime($mStart . ' +1 month'));
+            render('monthly', $common + [
+                'title'      => date('F Y', strtotime($mStart)) . ' — Monthly Report',
+                'months'     => $months,
+                'month'      => $month,
+                'prevMonth'  => in_array($prevMonth, $months, true) ? $prevMonth : null,
+                'nextMonth'  => in_array($nextMonth, $months, true) ? $nextMonth : null,
+                'summary'    => Reports::monthSummary($month),
+                'prevSummary'=> Reports::monthSummary($prevMonth),
+                'channels'   => Reports::gaChannels($mStart, $mEnd),
+                'content'    => Reports::monthContent($month),
+                'emails'     => Reports::emailTable($mStart, $mEnd),
+                'social'     => Reports::socialTotals($mStart, $mEnd),
+                'notes'      => Reports::monthNotes($month),
+                'flash'      => $flash,
+            ]);
+        } else {
+            render('monthly', $common + [
+                'title'     => 'Monthly Reports',
+                'months'    => $months,
+                'month'     => null,
+                'summaries' => array_map(fn ($m) => Reports::monthSummary($m), array_slice($months, 0, 24)),
+                'flash'     => $flash,
+            ]);
+        }
+        break;
+
     case 'reports':
         $years = Reports::availableYears();
         $year  = (int) ($_GET['year'] ?? $years[0]);
@@ -256,7 +348,7 @@ switch ($page) {
             } else {
                 $fields = [
                     'site_name', 'timezone', 'sync_time', 'cron_token', 'mcp_token',
-                    'site_base_url', 'content_path_rules',
+                    'site_base_url', 'content_path_rules', 'wp_username', 'wp_app_password',
                     'content_exclude_blog', 'content_exclude_documentation',
                     'content_exclude_landing_page', 'content_exclude_case_study',
                     'brand_logo', 'brand_logo_url', 'accent_color',
@@ -298,7 +390,7 @@ switch ($page) {
         $deletable = ['content_items', 'content_metrics', 'campaigns', 'campaign_metrics',
                       'keywords', 'keyword_rankings', 'social_posts', 'social_daily',
                       'email_campaigns', 'gsc_queries', 'gsc_pages', 'gsc_daily',
-                      'ga_daily', 'ga_channels', 'ga_pages'];
+                      'ga_daily', 'ga_channels', 'ga_pages', 'monthly_notes'];
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['table'] ?? '', $deletable, true)) {
             DB::run("DELETE FROM {$_POST['table']} WHERE rowid = :id", [':id' => (int) ($_POST['id'] ?? 0)]);
         }

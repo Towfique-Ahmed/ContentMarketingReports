@@ -209,11 +209,11 @@ landing_page=/features/"><?= $s('content_path_rules') ?></textarea>
 <div class="card" style="margin-bottom:16px">
   <h2>Report data</h2>
   <p class="hint" style="margin-bottom:10px">
-    The app ships with demo data so you can explore it. Once your real sources are connected
-    (or you're ready to import CSVs), wipe everything below — reports will show 0 until real
-    data arrives. Your settings and API credentials are kept.
+    The app starts empty — every report shows 0 until your real sources are connected,
+    you import CSVs, or you add rows manually. Use the button below to wipe all report
+    data and start over at any time. Your settings and API credentials are kept.
   </p>
-  <form method="post" onsubmit="return confirm('Delete ALL report data (demo and imported)? Settings and credentials are kept. This cannot be undone.')">
+  <form method="post" onsubmit="return confirm('Delete ALL report data? Settings and credentials are kept. This cannot be undone.')">
     <input type="hidden" name="action" value="clear_data">
     <button class="btn" type="submit" style="background: var(--bad)">Delete all report data</button>
   </form>

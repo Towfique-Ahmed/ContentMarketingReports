@@ -23,7 +23,7 @@ class DB
             if ($fresh) {
                 // Bootstrap default settings only — reports start at 0 until the
                 // API sync, CSV imports, or manual entries provide real data.
-                // Demo data is opt-in: php bin/seed.php --fresh
+                // No demo/dummy data ships with the app.
                 self::$pdo->exec("INSERT OR IGNORE INTO settings (key, value) VALUES
                     ('site_name', 'Analytio'),
                     ('sync_time', '06:00'),

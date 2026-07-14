@@ -13,7 +13,7 @@ use App\Core\Reports;
 use App\Core\Settings;
 use App\Services\SyncRunner;
 
-DB::conn(); // boot the database (creates schema + demo data on first run)
+DB::conn(); // boot the database (creates an empty schema on first run)
 
 $page = $_GET['page'] ?? 'dashboard';
 [$start, $end, $prevStart, $prevEnd, $rangeLabel] = date_range();
@@ -336,14 +336,13 @@ switch ($page) {
         $flash = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (($_POST['action'] ?? '') === 'clear_data') {
-                // Wipe all report data (demo or otherwise); settings/credentials stay.
+                // Wipe all report data; settings/credentials stay.
                 foreach (['content_metrics', 'content_items', 'gsc_daily', 'gsc_queries', 'gsc_pages',
                           'ga_daily', 'ga_channels', 'ga_pages', 'social_daily', 'social_posts',
                           'campaign_metrics', 'campaigns', 'keyword_rankings', 'keywords',
                           'email_campaigns'] as $table) {
                     DB::run("DELETE FROM {$table}");
                 }
-                Settings::set('demo_mode', '0');
                 $flash = '✓ All report data deleted. Every report now shows 0 until the API sync or your imports fill it with real data. Run a sync from the button below.';
             } else {
                 $fields = [

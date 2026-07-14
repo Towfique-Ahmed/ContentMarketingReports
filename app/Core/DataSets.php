@@ -309,6 +309,11 @@ class DataSets
 
         $row = [];
         foreach ($set['fields'] as $name => $spec) {
+            // Only write fields the caller actually provided — a CSV without a
+            // "users" column must not zero out users stored by another import.
+            if (!array_key_exists($name, $input) && !($spec['required'] ?? false)) {
+                continue;
+            }
             $raw = $input[$name] ?? null;
             if ($spec['type'] === 'lookup') {
                 [$table, $matchCol, $idCol] = $spec['lookup'];
@@ -388,13 +393,14 @@ class DataSets
             }
         }
 
-        // Find the header row (skips leading title rows in sheet exports)
+        // Find the header row (skips leading title rows in sheet exports).
+        // First match wins per field, so "Sessions %" can't clobber "Sessions".
         $columns = null;
         while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             $mapped = [];
             foreach ($cells as $i => $h) {
                 $key = self::normalizeHeader((string) $h);
-                if (isset($aliasMap[$key])) {
+                if (isset($aliasMap[$key]) && !in_array($aliasMap[$key], $mapped, true)) {
                     $mapped[$i] = $aliasMap[$key];
                 }
             }

@@ -112,10 +112,19 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
 
   <div class="card" style="margin-bottom:16px">
     <h2>Recorded data points in this range</h2>
-    <div class="table-wrap" style="max-height:280px; overflow-y:auto">
+    <?php ['rows' => $sdRows, 'state' => $sdState] = paginate_rows($series, ['date', 'followers', 'impressions', 'engagements', 'clicks', 'video_views'], 'date', 'desc', 'sd'); ?>
+    <div class="table-wrap">
       <table class="data">
-        <tr><th>Date</th><th class="num">Followers</th><th class="num">Impressions</th><th class="num">Engagements</th><th class="num">Clicks</th><th class="num">Video views</th><th></th></tr>
-        <?php foreach (array_reverse($series) as $d): ?>
+        <tr>
+          <?= sortable_th('date', 'Date', $sdState) ?>
+          <?= sortable_th('followers', 'Followers', $sdState, 'num') ?>
+          <?= sortable_th('impressions', 'Impressions', $sdState, 'num') ?>
+          <?= sortable_th('engagements', 'Engagements', $sdState, 'num') ?>
+          <?= sortable_th('clicks', 'Clicks', $sdState, 'num') ?>
+          <?= sortable_th('video_views', 'Video views', $sdState, 'num') ?>
+          <th></th>
+        </tr>
+        <?php foreach ($sdRows as $d): ?>
         <tr>
           <td style="white-space:nowrap"><?= h($d['date']) ?></td>
           <td class="num"><?= fmt_num($d['followers']) ?></td>
@@ -130,14 +139,24 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
         <?php endif; ?>
       </table>
     </div>
+    <?= pagination_bar($sdState) ?>
   </div>
 
   <div class="card">
     <h2>Recent posts</h2>
+    <?php ['rows' => $spRows, 'state' => $spState] = paginate_rows($posts, ['posted_at', 'title', 'impressions', 'engagements', 'clicks', 'video_views'], 'posted_at', 'desc', 'sp'); ?>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Date</th><th>Post</th><th class="num">Impressions</th><th class="num">Engagements</th><th class="num">Clicks</th><?= $platform === 'youtube' ? '<th class="num">Views</th>' : '' ?><th></th></tr>
-        <?php foreach ($posts as $post): ?>
+        <tr>
+          <?= sortable_th('posted_at', 'Date', $spState) ?>
+          <?= sortable_th('title', 'Post', $spState) ?>
+          <?= sortable_th('impressions', 'Impressions', $spState, 'num') ?>
+          <?= sortable_th('engagements', 'Engagements', $spState, 'num') ?>
+          <?= sortable_th('clicks', 'Clicks', $spState, 'num') ?>
+          <?= $platform === 'youtube' ? sortable_th('video_views', 'Views', $spState, 'num') : '' ?>
+          <th></th>
+        </tr>
+        <?php foreach ($spRows as $post): ?>
         <tr>
           <td><?= h($post['posted_at']) ?></td>
           <td><a href="<?= h($post['url']) ?>" target="_blank" rel="noopener"><span class="truncate"><?= h($post['title']) ?></span></a></td>
@@ -152,5 +171,6 @@ foreach ($prevTotals as $t) { $prevBy[$t['platform']] = $t; }
         <?php endif; ?>
       </table>
     </div>
+    <?= pagination_bar($spState) ?>
   </div>
 <?php endif; ?>

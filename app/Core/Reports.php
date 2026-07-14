@@ -29,7 +29,7 @@ class Reports
         );
     }
 
-    public static function gscTopQueries(int $limit = 25): array
+    public static function gscTopQueries(int $limit = 100000): array
     {
         $latest = DB::value('SELECT MAX(date) FROM gsc_queries');
         return $latest ? DB::all(
@@ -39,7 +39,7 @@ class Reports
         ) : [];
     }
 
-    public static function gscTopPages(int $limit = 25): array
+    public static function gscTopPages(int $limit = 100000): array
     {
         $latest = DB::value('SELECT MAX(date) FROM gsc_pages');
         return $latest ? DB::all(
@@ -83,7 +83,7 @@ class Reports
         );
     }
 
-    public static function gaTopPages(string $start, string $end, int $limit = 25): array
+    public static function gaTopPages(string $start, string $end, int $limit = 100000): array
     {
         return DB::all(
             'SELECT page, SUM(pageviews) pageviews, SUM(users) users
@@ -164,7 +164,7 @@ class Reports
         );
     }
 
-    public static function socialPosts(string $platform, int $limit = 20): array
+    public static function socialPosts(string $platform, int $limit = 100000): array
     {
         return DB::all(
             'SELECT id, posted_at, title, url, impressions, engagements, clicks, video_views

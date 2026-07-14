@@ -40,15 +40,21 @@ $totClk   = array_sum(array_map(fn ($r) => (int) $r['clicks'], $rows));
 
 <div class="card" style="margin-top:16px">
   <h2>Keyword rankings</h2>
+  <?php ['rows' => $kwRows, 'state' => $kwState] = paginate_rows($rows, ['keyword', 'target_url', 'search_volume', 'difficulty', 'position', 'clicks', 'impressions'], 'clicks', 'desc'); ?>
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Keyword</th><th>Target page</th>
-        <th class="num">Volume</th><th class="num">Difficulty</th>
-        <th class="num">Position</th><th class="num">Change</th>
-        <th class="num">Clicks</th><th class="num">Impressions</th><th></th>
+        <?= sortable_th('keyword', 'Keyword', $kwState) ?>
+        <?= sortable_th('target_url', 'Target page', $kwState) ?>
+        <?= sortable_th('search_volume', 'Volume', $kwState, 'num') ?>
+        <?= sortable_th('difficulty', 'Difficulty', $kwState, 'num') ?>
+        <?= sortable_th('position', 'Position', $kwState, 'num') ?>
+        <th class="num">Change</th>
+        <?= sortable_th('clicks', 'Clicks', $kwState, 'num') ?>
+        <?= sortable_th('impressions', 'Impressions', $kwState, 'num') ?>
+        <th></th>
       </tr>
-      <?php foreach ($rows as $r): ?>
+      <?php foreach ($kwRows as $r): ?>
       <tr>
         <td><a href="<?= h(url_with(['id' => $r['id']])) ?>"><?= h($r['keyword']) ?></a></td>
         <td><span class="truncate" style="max-width:240px"><?= h(parse_url((string) $r['target_url'], PHP_URL_PATH) ?: $r['target_url']) ?></span></td>
@@ -73,5 +79,6 @@ $totClk   = array_sum(array_map(fn ($r) => (int) $r['clicks'], $rows));
       <?php endif; ?>
     </table>
   </div>
+  <?= pagination_bar($kwState) ?>
   <p class="hint">Position change compares the end of the selected range with its start. Click a keyword for its full history.</p>
 </div>

@@ -42,15 +42,26 @@ $totClk  = array_sum(array_column($rows, 'clicks'));
 
 <div class="card" style="margin-top:16px">
   <h2>All campaigns</h2>
+  <?php ['rows' => $cmRows, 'state' => $cmState] = paginate_rows($rows, ['name', 'channel', 'status', 'start_date', 'budget', 'cost', 'impressions', 'clicks', 'conversions', 'revenue'], 'revenue', 'desc'); ?>
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Campaign</th><th>Channel</th><th>Status</th><th>Dates</th>
-        <th class="num">Budget</th><th class="num">Spend</th><th class="num">Impressions</th>
-        <th class="num">Clicks</th><th class="num">CTR</th><th class="num">Conv.</th>
-        <th class="num">CPA</th><th class="num">Revenue</th><th class="num">ROAS</th><th></th>
+        <?= sortable_th('name', 'Campaign', $cmState) ?>
+        <?= sortable_th('channel', 'Channel', $cmState) ?>
+        <?= sortable_th('status', 'Status', $cmState) ?>
+        <?= sortable_th('start_date', 'Dates', $cmState) ?>
+        <?= sortable_th('budget', 'Budget', $cmState, 'num') ?>
+        <?= sortable_th('cost', 'Spend', $cmState, 'num') ?>
+        <?= sortable_th('impressions', 'Impressions', $cmState, 'num') ?>
+        <?= sortable_th('clicks', 'Clicks', $cmState, 'num') ?>
+        <th class="num">CTR</th>
+        <?= sortable_th('conversions', 'Conv.', $cmState, 'num') ?>
+        <th class="num">CPA</th>
+        <?= sortable_th('revenue', 'Revenue', $cmState, 'num') ?>
+        <th class="num">ROAS</th>
+        <th></th>
       </tr>
-      <?php foreach ($rows as $r): ?>
+      <?php foreach ($cmRows as $r): ?>
       <tr>
         <td><a href="<?= h(url_with(['id' => $r['id']])) ?>"><span class="truncate" style="max-width:220px"><?= h($r['name']) ?></span></a></td>
         <td><?= h($r['channel']) ?></td>
@@ -67,8 +78,11 @@ $totClk  = array_sum(array_column($rows, 'clicks'));
         <td class="num"><?= $r['cost'] > 0 ? number_format($r['revenue'] / $r['cost'], 1) . 'x' : '—' ?></td>
         <td class="num"><?= delete_button('campaigns', (int) $r['id']) ?></td>
       </tr>
-      <?php endforeach; ?>
+      <?php endforeach; if (!$rows): ?>
+      <tr><td colspan="14">No campaigns yet — add them with the manage-data panel below.</td></tr>
+      <?php endif; ?>
     </table>
   </div>
+  <?= pagination_bar($cmState) ?>
   <p class="hint">Metrics reflect the selected date range. Click a campaign for its daily trend.</p>
 </div>

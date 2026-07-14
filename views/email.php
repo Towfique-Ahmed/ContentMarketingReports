@@ -46,15 +46,24 @@ $prevClick = $prevDen > 0 ? $prev['clicks'] / $prevDen * 100 : 0;
 
 <div class="card" style="margin-top:16px">
   <h2>All campaigns</h2>
+  <?php ['rows' => $emRows, 'state' => $emState] = paginate_rows($rows, ['date', 'name', 'type', 'list_name', 'sent', 'delivered', 'opens', 'clicks', 'unsubscribes'], 'date', 'desc'); ?>
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Date</th><th>Campaign</th><th>Type</th><th>List</th>
-        <th class="num">Sent</th><th class="num">Delivered</th><th class="num">Opens</th>
-        <th class="num">Open rate</th><th class="num">Clicks</th><th class="num">Click rate</th>
-        <th class="num">Unsubs</th><th></th>
+        <?= sortable_th('date', 'Date', $emState) ?>
+        <?= sortable_th('name', 'Campaign', $emState) ?>
+        <?= sortable_th('type', 'Type', $emState) ?>
+        <?= sortable_th('list_name', 'List', $emState) ?>
+        <?= sortable_th('sent', 'Sent', $emState, 'num') ?>
+        <?= sortable_th('delivered', 'Delivered', $emState, 'num') ?>
+        <?= sortable_th('opens', 'Opens', $emState, 'num') ?>
+        <th class="num">Open rate</th>
+        <?= sortable_th('clicks', 'Clicks', $emState, 'num') ?>
+        <th class="num">Click rate</th>
+        <?= sortable_th('unsubscribes', 'Unsubs', $emState, 'num') ?>
+        <th></th>
       </tr>
-      <?php foreach ($rows as $r):
+      <?php foreach ($emRows as $r):
           $rowDen = $r['delivered'] ?: $r['sent'];
           $or = $rowDen > 0 ? $r['opens'] / $rowDen * 100 : 0;
           $cr = $rowDen > 0 ? $r['clicks'] / $rowDen * 100 : 0; ?>
@@ -73,8 +82,9 @@ $prevClick = $prevDen > 0 ? $prev['clicks'] / $prevDen * 100 : 0;
         <td class="num"><?= delete_button('email_campaigns', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="12">No email campaigns in this range — add them in the <a href="?page=data&set=email_campaigns">Data Manager</a> (manual entry or CSV import).</td></tr>
+      <tr><td colspan="12">No email campaigns in this range — add them with the manage-data panel below (manual entry or CSV import).</td></tr>
       <?php endif; ?>
     </table>
   </div>
+  <?= pagination_bar($emState) ?>
 </div>

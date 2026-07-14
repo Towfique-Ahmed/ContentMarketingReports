@@ -150,6 +150,33 @@ table.data td.num, table.data th.num { text-align: right; font-variant-numeric: 
 table.data tr:hover td { background: var(--accent-wash); }
 .truncate { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 
+/* ---- Sortable headers ---- */
+table.data th .sort-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+table.data th .sort-link:hover { color: var(--accent); text-decoration: none; }
+table.data th .sort-link.active { color: var(--text-primary); }
+
+/* ---- Pagination bar ---- */
+.pagination {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--grid);
+  font-size: 12px; color: var(--text-muted);
+}
+.pagination .pg-count { margin-right: auto; }
+.pg-links { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pg-link {
+  display: inline-block; min-width: 26px; text-align: center; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 6px; color: var(--text-secondary);
+  text-decoration: none; font-weight: 600;
+}
+.pg-link:hover { background: var(--accent-wash); text-decoration: none; }
+.pg-link.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pg-link.disabled { opacity: .4; pointer-events: none; }
+.pg-gap { padding: 0 2px; }
+.pp-select select {
+  font-size: 12px; padding: 3px 6px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--card); color: var(--text-primary);
+}
+
 /* ---- Badges ---- */
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px;

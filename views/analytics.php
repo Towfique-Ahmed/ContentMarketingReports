@@ -78,10 +78,15 @@
   </div>
   <div class="card">
     <h2>Top pages</h2>
+    <?php ['rows' => $apRows, 'state' => $apState] = paginate_rows($pages, ['page', 'pageviews', 'users'], 'pageviews', 'desc', 'ap'); ?>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Page</th><th class="num">Pageviews</th><th class="num">Users</th></tr>
-        <?php foreach (array_slice($pages, 0, 12) as $p): ?>
+        <tr>
+          <?= sortable_th('page', 'Page', $apState) ?>
+          <?= sortable_th('pageviews', 'Pageviews', $apState, 'num') ?>
+          <?= sortable_th('users', 'Users', $apState, 'num') ?>
+        </tr>
+        <?php foreach ($apRows as $p): ?>
         <tr>
           <td><span class="truncate"><?= h($p['page']) ?></span></td>
           <td class="num"><?= fmt_num($p['pageviews']) ?></td>
@@ -92,5 +97,6 @@
         <?php endif; ?>
       </table>
     </div>
+    <?= pagination_bar($apState) ?>
   </div>
 </div>

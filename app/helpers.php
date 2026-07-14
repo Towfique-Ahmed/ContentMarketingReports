@@ -197,3 +197,169 @@ function url_with(array $overrides): string
     $params = array_merge($_GET, $overrides);
     return '?' . http_build_query(array_filter($params, fn ($v) => $v !== null && $v !== ''));
 }
+
+/* ------------------------------------------------------------------ */
+/* Pagination + sorting (server-side, no JavaScript required)          */
+/* ------------------------------------------------------------------ */
+
+/** Allowed page sizes offered in the rows-per-page selector. */
+const PAGE_SIZES = [20, 25, 50, 100, 150, 200];
+
+/** Namespaced query-param name so several tables can paginate on one page. */
+function pkey(string $base, string $ns = ''): string
+{
+    return $ns === '' ? $base : $base . '_' . $ns;
+}
+
+/**
+ * Sort and paginate an already-fetched result set in PHP.
+ *
+ * Reads pg / pp / sort / dir from $_GET (namespaced with $ns, e.g. pg_posts)
+ * so multiple independent tables can live on one page. Sorting is column-safe
+ * because it only ever orders by a key that exists in the row.
+ *
+ * @param array<int, array<string, mixed>> $rows        full result set
+ * @param list<string>                      $sortable    columns the user may sort by
+ * @param string                            $defaultSort initial sort column ('' = keep input order)
+ * @param string                            $defaultDir  'asc' or 'desc'
+ * @return array{rows: array, state: array<string, mixed>}
+ */
+function paginate_rows(array $rows, array $sortable = [], string $defaultSort = '', string $defaultDir = 'desc', string $ns = ''): array
+{
+    $sort = (string) ($_GET[pkey('sort', $ns)] ?? $defaultSort);
+    if ($sort !== '' && !in_array($sort, $sortable, true)) {
+        $sort = $defaultSort;
+    }
+    $dir = strtolower((string) ($_GET[pkey('dir', $ns)] ?? $defaultDir)) === 'asc' ? 'asc' : 'desc';
+
+    if ($sort !== '') {
+        // Numeric when every present value in the column is numeric.
+        $numeric = true;
+        foreach ($rows as $r) {
+            $v = $r[$sort] ?? null;
+            if ($v !== null && $v !== '' && !is_numeric($v)) {
+                $numeric = false;
+                break;
+            }
+        }
+        usort($rows, function ($a, $b) use ($sort, $numeric) {
+            $x = $a[$sort] ?? null;
+            $y = $b[$sort] ?? null;
+            if ($numeric) {
+                return ((float) $x) <=> ((float) $y);
+            }
+            return strcasecmp((string) $x, (string) $y);
+        });
+        if ($dir === 'desc') {
+            $rows = array_reverse($rows);
+        }
+    }
+
+    $total   = count($rows);
+    $perPage = (int) ($_GET[pkey('pp', $ns)] ?? PAGE_SIZES[0]);
+    if (!in_array($perPage, PAGE_SIZES, true)) {
+        $perPage = PAGE_SIZES[0];
+    }
+    $pages = max(1, (int) ceil($total / $perPage));
+    $page  = max(1, min($pages, (int) ($_GET[pkey('pg', $ns)] ?? 1)));
+    $offset = ($page - 1) * $perPage;
+
+    return [
+        'rows'  => array_slice($rows, $offset, $perPage),
+        'state' => [
+            'ns' => $ns, 'total' => $total, 'per_page' => $perPage,
+            'page' => $page, 'pages' => $pages, 'offset' => $offset,
+            'sort' => $sort, 'dir' => $dir, 'sortable' => $sortable,
+        ],
+    ];
+}
+
+/**
+ * A sortable table header cell. Falls back to a plain <th> when the column
+ * isn't in the sortable allow-list. Clicking toggles asc/desc and resets to
+ * page 1. $align adds a class (e.g. 'num') for right-aligned numeric columns.
+ */
+function sortable_th(string $col, string $label, array $state, string $align = ''): string
+{
+    $ns   = $state['ns'] ?? '';
+    $cls  = $align ? ' class="' . h($align) . '"' : '';
+    if (!in_array($col, $state['sortable'] ?? [], true)) {
+        return '<th' . $cls . '>' . h($label) . '</th>';
+    }
+    $active = ($state['sort'] ?? '') === $col;
+    $nextDir = ($active && ($state['dir'] ?? '') === 'asc') ? 'desc' : 'asc';
+    $arrow = $active ? ($state['dir'] === 'asc' ? ' ▲' : ' ▼') : '';
+    $href = url_with([
+        pkey('sort', $ns) => $col,
+        pkey('dir', $ns)  => $nextDir,
+        pkey('pg', $ns)   => null,
+    ]);
+    return '<th' . $cls . '><a class="sort-link' . ($active ? ' active' : '') . '" href="'
+        . h($href) . '">' . h($label) . $arrow . '</a></th>';
+}
+
+/**
+ * Render the pagination bar: "showing X–Y of Z", a rows-per-page selector,
+ * and Prev / page-number / Next links. No-ops when there's nothing to show.
+ */
+function pagination_bar(array $state): string
+{
+    $total = (int) ($state['total'] ?? 0);
+    if ($total === 0) {
+        return '';
+    }
+    $ns   = $state['ns'] ?? '';
+    $page = (int) $state['page'];
+    $pages = (int) $state['pages'];
+    $per  = (int) $state['per_page'];
+    $from = (int) $state['offset'] + 1;
+    $to   = min($total, (int) $state['offset'] + $per);
+
+    // Rows-per-page selector (auto-navigates on change).
+    $opts = '';
+    foreach (PAGE_SIZES as $size) {
+        $url = url_with([pkey('pp', $ns) => $size, pkey('pg', $ns) => null]);
+        $opts .= '<option value="' . h($url) . '"' . ($size === $per ? ' selected' : '') . '>' . $size . '</option>';
+    }
+    $selector = '<label class="pp-select">Rows: <select onchange="location.href=this.value">' . $opts . '</select></label>';
+
+    // Page links: first, window around current, last.
+    $links = '';
+    if ($pages > 1) {
+        $mk = function (int $p, string $text, bool $disabled = false, bool $active = false) use ($ns): string {
+            if ($disabled) {
+                return '<span class="pg-link disabled">' . h($text) . '</span>';
+            }
+            if ($active) {
+                return '<span class="pg-link active">' . h($text) . '</span>';
+            }
+            return '<a class="pg-link" href="' . h(url_with([pkey('pg', $ns) => $p])) . '">' . h($text) . '</a>';
+        };
+        $links .= $mk($page - 1, '‹ Prev', $page <= 1);
+        $window = 2;
+        $start = max(1, $page - $window);
+        $end   = min($pages, $page + $window);
+        if ($start > 1) {
+            $links .= $mk(1, '1');
+            if ($start > 2) {
+                $links .= '<span class="pg-gap">…</span>';
+            }
+        }
+        for ($p = $start; $p <= $end; $p++) {
+            $links .= $mk($p, (string) $p, false, $p === $page);
+        }
+        if ($end < $pages) {
+            if ($end < $pages - 1) {
+                $links .= '<span class="pg-gap">…</span>';
+            }
+            $links .= $mk($pages, (string) $pages);
+        }
+        $links .= $mk($page + 1, 'Next ›', $page >= $pages);
+    }
+
+    return '<div class="pagination">'
+        . '<span class="pg-count">Showing ' . $from . '–' . $to . ' of ' . number_format($total) . '</span>'
+        . '<span class="pg-links">' . $links . '</span>'
+        . $selector
+        . '</div>';
+}

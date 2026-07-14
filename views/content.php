@@ -37,16 +37,25 @@ $totalConv = array_sum(array_column($rows, 'conversions'));
 </div>
 
 <div class="card" style="margin-top:16px">
-  <h2>All <?= h(strtolower($types[$type])) ?> — sorted by pageviews</h2>
+  <h2>All <?= h(strtolower($types[$type])) ?></h2>
+  <?php ['rows' => $ctRows, 'state' => $ctState] = paginate_rows($rows, ['title', 'funnel_stage', 'author', 'published_at', 'target_keyword', 'search_volume', 'views', 'pageviews', 'visitors', 'conversions'], 'pageviews', 'desc'); ?>
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Title</th><th>Funnel</th><th>Author</th><th>Published</th>
-        <th>Target keyword</th><th class="num">Kw pos</th><th class="num">Volume</th>
-        <th class="num">Views</th><th class="num">Pageviews</th><th class="num">Visitors</th>
-        <th class="num">Conversions</th><th></th>
+        <?= sortable_th('title', 'Title', $ctState) ?>
+        <?= sortable_th('funnel_stage', 'Funnel', $ctState) ?>
+        <?= sortable_th('author', 'Author', $ctState) ?>
+        <?= sortable_th('published_at', 'Published', $ctState) ?>
+        <?= sortable_th('target_keyword', 'Target keyword', $ctState) ?>
+        <th class="num">Kw pos</th>
+        <?= sortable_th('search_volume', 'Volume', $ctState, 'num') ?>
+        <?= sortable_th('views', 'Views', $ctState, 'num') ?>
+        <?= sortable_th('pageviews', 'Pageviews', $ctState, 'num') ?>
+        <?= sortable_th('visitors', 'Visitors', $ctState, 'num') ?>
+        <?= sortable_th('conversions', 'Conversions', $ctState, 'num') ?>
+        <th></th>
       </tr>
-      <?php foreach ($rows as $r): ?>
+      <?php foreach ($ctRows as $r): ?>
       <tr>
         <td><a href="<?= h($r['url']) ?>" target="_blank" rel="noopener"><span class="truncate"><?= h($r['title']) ?></span></a></td>
         <td><?= $r['funnel_stage'] ? '<span class="badge">' . h($r['funnel_stage']) . '</span>' : '—' ?></td>
@@ -66,4 +75,5 @@ $totalConv = array_sum(array_column($rows, 'conversions'));
       <?php endif; ?>
     </table>
   </div>
+  <?= pagination_bar($ctState) ?>
 </div>

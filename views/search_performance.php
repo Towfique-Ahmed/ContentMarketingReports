@@ -112,10 +112,18 @@
 <div class="grid grid-2">
   <div class="card">
     <h2>Top search queries</h2>
+    <?php ['rows' => $qRows, 'state' => $qState] = paginate_rows($queries, ['query', 'clicks', 'impressions', 'ctr', 'position'], 'clicks', 'desc', 'q'); ?>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Query</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th><th></th></tr>
-        <?php foreach ($queries as $q): ?>
+        <tr>
+          <?= sortable_th('query', 'Query', $qState) ?>
+          <?= sortable_th('clicks', 'Clicks', $qState, 'num') ?>
+          <?= sortable_th('impressions', 'Impressions', $qState, 'num') ?>
+          <?= sortable_th('ctr', 'CTR', $qState, 'num') ?>
+          <?= sortable_th('position', 'Position', $qState, 'num') ?>
+          <th></th>
+        </tr>
+        <?php foreach ($qRows as $q): ?>
         <tr>
           <td><span class="truncate"><?= h($q['query']) ?></span></td>
           <td class="num"><?= fmt_num($q['clicks']) ?></td>
@@ -129,13 +137,22 @@
         <?php endif; ?>
       </table>
     </div>
+    <?= pagination_bar($qState) ?>
   </div>
   <div class="card">
     <h2>Top pages in search</h2>
+    <?php ['rows' => $pRows, 'state' => $pState] = paginate_rows($pages, ['page', 'clicks', 'impressions', 'ctr', 'position'], 'clicks', 'desc', 'p'); ?>
     <div class="table-wrap">
       <table class="data">
-        <tr><th>Page</th><th class="num">Clicks</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th><th></th></tr>
-        <?php foreach ($pages as $p): ?>
+        <tr>
+          <?= sortable_th('page', 'Page', $pState) ?>
+          <?= sortable_th('clicks', 'Clicks', $pState, 'num') ?>
+          <?= sortable_th('impressions', 'Impressions', $pState, 'num') ?>
+          <?= sortable_th('ctr', 'CTR', $pState, 'num') ?>
+          <?= sortable_th('position', 'Position', $pState, 'num') ?>
+          <th></th>
+        </tr>
+        <?php foreach ($pRows as $p): ?>
         <tr>
           <td><a href="<?= h($p['page']) ?>" target="_blank" rel="noopener"><span class="truncate"><?= h(parse_url($p['page'], PHP_URL_PATH) ?: $p['page']) ?></span></a></td>
           <td class="num"><?= fmt_num($p['clicks']) ?></td>
@@ -149,15 +166,21 @@
         <?php endif; ?>
       </table>
     </div>
+    <?= pagination_bar($pState) ?>
   </div>
 </div>
 
 <div class="card">
   <h2>Top pages by traffic (GA4)</h2>
+  <?php ['rows' => $gpRows, 'state' => $gpState] = paginate_rows($gaPages, ['page', 'pageviews', 'users'], 'pageviews', 'desc', 'gp'); ?>
   <div class="table-wrap">
     <table class="data">
-      <tr><th>Page</th><th class="num">Pageviews</th><th class="num">Users</th></tr>
-      <?php foreach (array_slice($gaPages, 0, 12) as $p): ?>
+      <tr>
+        <?= sortable_th('page', 'Page', $gpState) ?>
+        <?= sortable_th('pageviews', 'Pageviews', $gpState, 'num') ?>
+        <?= sortable_th('users', 'Users', $gpState, 'num') ?>
+      </tr>
+      <?php foreach ($gpRows as $p): ?>
       <tr>
         <td><span class="truncate"><?= h($p['page']) ?></span></td>
         <td class="num"><?= fmt_num($p['pageviews']) ?></td>
@@ -168,4 +191,5 @@
       <?php endif; ?>
     </table>
   </div>
+  <?= pagination_bar($gpState) ?>
 </div>

@@ -55,24 +55,24 @@ switch ($page) {
         break;
 
     case 'search-console':
-        render('search_console', $common + [
-            'title'   => 'Google Search Performance',
-            'totals'  => Reports::gscTotals($start, $end),
-            'prev'    => Reports::gscTotals($prevStart, $prevEnd),
-            'series'  => Reports::gscSeries($start, $end),
-            'queries' => Reports::gscTopQueries(),
-            'pages'   => Reports::gscTopPages(),
-        ]);
-        break;
-
     case 'analytics':
-        render('analytics', $common + [
-            'title'    => 'Google Analytics (GA4)',
-            'totals'   => Reports::gaTotals($start, $end),
-            'prev'     => Reports::gaTotals($prevStart, $prevEnd),
-            'series'   => Reports::gaSeries($start, $end),
-            'channels' => Reports::gaChannels($start, $end),
-            'pages'    => Reports::gaTopPages($start, $end),
+        // Old URLs redirect to the combined report
+        header('Location: ' . url_with(['page' => 'search-performance']));
+        exit;
+
+    case 'search-performance':
+        render('search_performance', $common + [
+            'title'     => 'Search Performance Report',
+            'gsc'       => Reports::gscTotals($start, $end),
+            'gscPrev'   => Reports::gscTotals($prevStart, $prevEnd),
+            'gscSeries' => Reports::gscSeries($start, $end),
+            'queries'   => Reports::gscTopQueries(),
+            'pages'     => Reports::gscTopPages(),
+            'ga'        => Reports::gaTotals($start, $end),
+            'gaPrev'    => Reports::gaTotals($prevStart, $prevEnd),
+            'gaSeries'  => Reports::gaSeries($start, $end),
+            'channels'  => Reports::gaChannels($start, $end),
+            'gaPages'   => Reports::gaTopPages($start, $end),
         ]);
         break;
 
@@ -171,8 +171,11 @@ switch ($page) {
                         if (empty($_FILES['csv']['tmp_name']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
                             throw new RuntimeException('Upload failed — please choose a CSV file.');
                         }
-                        $result = DataSets::importCsv($setKey, $_FILES['csv']['tmp_name'],
-                                                      ['measure' => $_POST['measure'] ?? 'sessions']);
+                        $importOptions = ['measure' => $_POST['measure'] ?? 'sessions'];
+                        if (!empty($_POST['default_type'])) {
+                            $importOptions['defaults'] = ['type' => $_POST['default_type']];
+                        }
+                        $result = DataSets::importCsv($setKey, $_FILES['csv']['tmp_name'], $importOptions);
                         $flash = sprintf('✓ Import finished: %d rows imported/updated, %d skipped.',
                                          $result['ok'], $result['skipped']);
                         $importErrors = $result['errors'];
@@ -252,7 +255,7 @@ switch ($page) {
                 $flash = '✓ All report data deleted. Every report now shows 0 until the API sync or your imports fill it with real data. Run a sync from the button below.';
             } else {
                 $fields = [
-                    'site_name', 'timezone', 'sync_time', 'cron_token',
+                    'site_name', 'timezone', 'sync_time', 'cron_token', 'mcp_token',
                     'site_base_url', 'content_path_rules',
                     'content_exclude_blog', 'content_exclude_documentation',
                     'content_exclude_landing_page', 'content_exclude_case_study',
@@ -279,6 +282,9 @@ switch ($page) {
                 }
                 $saved = true;
             }
+        }
+        if (!Settings::get('mcp_token')) {
+            Settings::set('mcp_token', bin2hex(random_bytes(16)));
         }
         render('settings', $common + [
             'title'   => 'Settings',
@@ -307,6 +313,10 @@ switch ($page) {
         $results = SyncRunner::runAll();
         render('sync_result', $common + ['title' => 'Manual Sync', 'results' => $results]);
         break;
+
+    case 'mcp':
+        \App\Services\McpServer::handle();
+        exit;
 
     case 'cron':
         // Web cron fallback for shared hosting: /?page=cron&token=...

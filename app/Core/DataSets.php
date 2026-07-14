@@ -43,14 +43,16 @@ class DataSets
                 'label'  => 'Google Analytics — channel breakdown',
                 'table'  => 'ga_channels',
                 'unique' => ['date', 'channel'],
-                'help'   => 'Sessions/users per acquisition channel per day or month.',
+                'help'   => 'Sessions/users per acquisition channel per day or month. Long-format GA4 exports (Month, Channel, Total users, …) import directly; "Total" rows are skipped.',
                 'fields' => [
-                    'date'        => ['type' => 'date', 'required' => true],
+                    'date'        => ['type' => 'date', 'required' => true, 'aliases' => ['month']],
                     'channel'     => ['type' => 'text', 'required' => true],
                     'sessions'    => ['type' => 'int'],
-                    'users'       => ['type' => 'int'],
-                    'conversions' => ['type' => 'int'],
+                    'users'       => ['type' => 'int', 'aliases' => ['total_users']],
+                    'new_users'   => ['type' => 'int'],
+                    'conversions' => ['type' => 'int', 'aliases' => ['key_events']],
                 ],
+                'row_filter' => 'channel_not_total',
             ],
             'gsc_daily' => [
                 'label'  => 'Google Search Console — totals',
@@ -73,10 +75,22 @@ class DataSets
                 'fields' => [
                     'type'         => ['type' => 'select', 'required' => true,
                                        'options' => ['blog', 'documentation', 'landing_page', 'case_study']],
-                    'title'        => ['type' => 'text', 'required' => true],
-                    'url'          => ['type' => 'text', 'required' => true],
+                    'title'        => ['type' => 'text', 'required' => true, 'aliases' => ['topic']],
+                    'url'          => ['type' => 'text', 'required' => true, 'aliases' => ['links', 'link']],
                     'author'       => ['type' => 'text'],
-                    'published_at' => ['type' => 'date'],
+                    'published_at' => ['type' => 'date', 'aliases' => ['publish_date', 'date']],
+                    'funnel_stage' => ['type' => 'select', 'options' => ['TOFU', 'MOFU', 'BOFU'],
+                                       'aliases' => ['funnel']],
+                    'reviewer'     => ['type' => 'text'],
+                    'publisher'    => ['type' => 'text'],
+                    'target_keyword'   => ['type' => 'text'],
+                    'keyword_position' => ['type' => 'text', 'label' => 'Keyword position',
+                                           'aliases' => ['primary_keyword_position', 'position']],
+                    'search_volume'    => ['type' => 'int',
+                                           'aliases' => ['search_volume_combined_us_uk_au_ca']],
+                    'ai_presence'  => ['type' => 'text', 'label' => 'AI presence',
+                                       'aliases' => ['ai_presence_rank_screenshot']],
+                    'views'        => ['type' => 'int', 'label' => 'Total views', 'aliases' => ['blog_views']],
                 ],
             ],
             'content_metrics' => [
@@ -193,13 +207,18 @@ class DataSets
                 'help'   => 'Matches the "Email Marketing Performance" sheet export — Date, Campaign, Type, Sent, Delivered, Opens, Clicks, Unsubscribes. Open/click rates are computed automatically.',
                 'fields' => [
                     'date'         => ['type' => 'date', 'required' => true],
-                    'name'         => ['type' => 'text', 'required' => true, 'aliases' => ['campaign']],
-                    'type'         => ['type' => 'text'],
-                    'sent'         => ['type' => 'int'],
+                    'name'         => ['type' => 'text', 'required' => true, 'aliases' => ['campaign', 'email_title']],
+                    'type'         => ['type' => 'text', 'aliases' => ['type_category', 'category']],
+                    'sent'         => ['type' => 'int', 'aliases' => ['audience_sent_to', 'audience']],
                     'delivered'    => ['type' => 'int'],
                     'opens'        => ['type' => 'int'],
                     'clicks'       => ['type' => 'int'],
-                    'unsubscribes' => ['type' => 'int', 'aliases' => ['unsubs']],
+                    'unsubscribes' => ['type' => 'int', 'aliases' => ['unsubs', 'unsubscribed']],
+                    'list_name'    => ['type' => 'text', 'label' => 'List', 'aliases' => ['which_list', 'list']],
+                    'segment'      => ['type' => 'text', 'aliases' => ['segmentation']],
+                    'subject'      => ['type' => 'text', 'label' => 'Subject line',
+                                       'aliases' => ['winning_subject_line', 'subject_line']],
+                    'author'       => ['type' => 'text'],
                     'notes'        => ['type' => 'text'],
                 ],
             ],
@@ -240,7 +259,7 @@ class DataSets
     /** Accepts Y-m-d, d/m/Y, "Jan'25", "Jan 2025", "2025-01" → Y-m-d (months → 1st). */
     public static function cleanDate(?string $v): ?string
     {
-        $v = trim((string) $v);
+        $v = trim(trim((string) $v), "*† \t");
         if ($v === '') {
             return null;
         }
@@ -263,7 +282,7 @@ class DataSets
 
     private static function normalizeHeader(string $h): string
     {
-        return preg_replace('/[^a-z0-9]+/', '_', strtolower(trim($h)));
+        return trim(preg_replace('/[^a-z0-9]+/', '_', strtolower(trim($h))), '_');
     }
 
     private static function castValue(array $spec, ?string $raw): mixed
@@ -393,6 +412,7 @@ class DataSets
         $skipped = 0;
         $errors = [];
         $line = 1;
+        $defaults = (array) ($options['defaults'] ?? []);
         while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
             $line++;
             $input = [];
@@ -401,6 +421,18 @@ class DataSets
             }
             // Skip fully empty rows (sheet exports pad with hundreds of them)
             if (implode('', array_map(fn ($v) => trim((string) $v), $input)) === '') {
+                $skipped++;
+                continue;
+            }
+            // Fill columns absent from the file (e.g. content type chosen at upload)
+            foreach ($defaults as $field => $value) {
+                if (!isset($input[$field]) || trim((string) $input[$field]) === '') {
+                    $input[$field] = $value;
+                }
+            }
+            // Dataset-specific row filters (e.g. GA "Total" rollup rows)
+            if (($set['row_filter'] ?? '') === 'channel_not_total'
+                && strcasecmp(trim((string) ($input['channel'] ?? '')), 'total') === 0) {
                 $skipped++;
                 continue;
             }

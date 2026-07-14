@@ -29,6 +29,11 @@
       <input name="cron_token" value="<?= $s('cron_token') ?>">
       <div class="hint">Used by the <code class="inline">?page=cron&amp;token=…</code> endpoint for shared hosting.</div>
     </div>
+    <div class="field">
+      <label>MCP token</label>
+      <input name="mcp_token" value="<?= $s('mcp_token') ?>">
+      <div class="hint">Authenticates the Claude MCP connector (see the card below).</div>
+    </div>
   </div>
 
   <div class="card">
@@ -169,6 +174,21 @@ landing_page=/features/"><?= $s('content_path_rules') ?></textarea>
   <a class="btn btn-secondary" href="?page=sync-now" style="margin-left:8px">Run sync now</a>
 </p>
 </form>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Claude MCP connector</h2>
+  <p class="hint" style="margin-bottom:10px">
+    Manage this dashboard from Claude chat: read reports, add/update/delete data, and trigger syncs.
+    Add it as a <strong>custom connector</strong> in Claude (Settings → Connectors → Add custom connector)
+    using this URL:
+  </p>
+  <pre class="block">https://<?= h($_SERVER['HTTP_HOST'] ?? 'your-domain') ?>/?page=mcp&amp;token=<?= h(App\Core\Settings::get('mcp_token') ?? '') ?></pre>
+  <p class="hint">
+    Available tools: overview report, metric time series, list/add/delete rows in any dataset, run sync.
+    The token doubles as the password — regenerate it by editing the “MCP token” value in the General card
+    (field name <code class="inline">mcp_token</code>) if it ever leaks.
+  </p>
+</div>
 
 <div class="card" style="margin-bottom:16px">
   <h2>Report data</h2>

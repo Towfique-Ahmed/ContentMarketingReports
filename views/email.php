@@ -1,8 +1,11 @@
 <?php
-$openRate  = ($totals['delivered'] ?? 0) > 0 ? $totals['opens'] / $totals['delivered'] * 100 : 0;
-$clickRate = ($totals['delivered'] ?? 0) > 0 ? $totals['clicks'] / $totals['delivered'] * 100 : 0;
-$prevOpen  = ($prev['delivered'] ?? 0) > 0 ? $prev['opens'] / $prev['delivered'] * 100 : 0;
-$prevClick = ($prev['delivered'] ?? 0) > 0 ? $prev['clicks'] / $prev['delivered'] * 100 : 0;
+// Rates use delivered when available, otherwise sent (some trackers omit delivered)
+$den       = ($totals['delivered'] ?? 0) ?: ($totals['sent'] ?? 0);
+$prevDen   = ($prev['delivered'] ?? 0) ?: ($prev['sent'] ?? 0);
+$openRate  = $den > 0 ? $totals['opens'] / $den * 100 : 0;
+$clickRate = $den > 0 ? $totals['clicks'] / $den * 100 : 0;
+$prevOpen  = $prevDen > 0 ? $prev['opens'] / $prevDen * 100 : 0;
+$prevClick = $prevDen > 0 ? $prev['clicks'] / $prevDen * 100 : 0;
 ?>
 <div class="grid grid-4">
   <div class="card stat">
@@ -46,18 +49,20 @@ $prevClick = ($prev['delivered'] ?? 0) > 0 ? $prev['clicks'] / $prev['delivered'
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Date</th><th>Campaign</th><th>Type</th>
+        <th>Date</th><th>Campaign</th><th>Type</th><th>List</th>
         <th class="num">Sent</th><th class="num">Delivered</th><th class="num">Opens</th>
         <th class="num">Open rate</th><th class="num">Clicks</th><th class="num">Click rate</th>
         <th class="num">Unsubs</th><th></th>
       </tr>
       <?php foreach ($rows as $r):
-          $or = $r['delivered'] > 0 ? $r['opens'] / $r['delivered'] * 100 : 0;
-          $cr = $r['delivered'] > 0 ? $r['clicks'] / $r['delivered'] * 100 : 0; ?>
+          $rowDen = $r['delivered'] ?: $r['sent'];
+          $or = $rowDen > 0 ? $r['opens'] / $rowDen * 100 : 0;
+          $cr = $rowDen > 0 ? $r['clicks'] / $rowDen * 100 : 0; ?>
       <tr>
         <td style="white-space:nowrap"><?= h($r['date']) ?></td>
-        <td><span class="truncate"><?= h($r['name']) ?></span></td>
+        <td><span class="truncate" title="<?= h((string) $r['subject']) ?>"><?= h($r['name']) ?></span></td>
         <td><?= h((string) $r['type']) ?></td>
+        <td><?= h((string) $r['list_name']) ?></td>
         <td class="num"><?= fmt_num($r['sent']) ?></td>
         <td class="num"><?= fmt_num($r['delivered']) ?></td>
         <td class="num"><?= fmt_num($r['opens']) ?></td>
@@ -68,7 +73,7 @@ $prevClick = ($prev['delivered'] ?? 0) > 0 ? $prev['clicks'] / $prev['delivered'
         <td class="num"><?= delete_button('email_campaigns', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="11">No email campaigns in this range — add them in the <a href="?page=data&set=email_campaigns">Data Manager</a> (manual entry or CSV import).</td></tr>
+      <tr><td colspan="12">No email campaigns in this range — add them in the <a href="?page=data&set=email_campaigns">Data Manager</a> (manual entry or CSV import).</td></tr>
       <?php endif; ?>
     </table>
   </div>

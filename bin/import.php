@@ -6,15 +6,16 @@
  *
  *   php bin/import.php
  *
- * Loads:
- *   - email-campaigns-2026.csv      → email_campaigns
- *   - website-traffic-jan25-may26.csv
- *       · Search Performance section  → gsc_daily (monthly, 1st of month)
- *       · "User acquisition by Channel"    section → ga_channels.users
- *       · "Traffic Acquisition by Channel" section → ga_channels.sessions
- *       · monthly totals rows          → ga_daily.users / ga_daily.sessions
+ * Loads (all files optional — missing ones are skipped):
+ *   - content-report-2026.csv           → content_items (blogs with funnel stage,
+ *                                          target keyword, positions, views, volume)
+ *   - email-tracker-2026.csv            → email_campaigns (real campaign sends)
+ *   - user-acquisition-jan25-may26.csv  → ga_channels (users/new users/key events
+ *                                          per channel per month) + ga_daily users
+ *   - gsc-performance-jan25-may26.csv   → gsc_daily (monthly clicks/impressions/CTR/position)
+ *   - website-traffic-jan25-may26.csv   → gsc_daily + ga_channels sessions + ga_daily sessions
  *
- * Safe to re-run: everything upserts by date key.
+ * Safe to re-run: everything upserts by its natural key.
  */
 
 require dirname(__DIR__) . '/app/bootstrap.php';
@@ -25,31 +26,85 @@ use App\Core\DB;
 DB::conn();
 $dir = BASE_PATH . '/database/imports';
 
-/* ---- 1. Email campaigns ---- */
-$emailFile = $dir . '/email-campaigns-2026.csv';
-if (file_exists($emailFile)) {
-    $r = DataSets::importCsv('email_campaigns', $emailFile);
-    printf("email_campaigns:  %d imported, %d skipped\n", $r['ok'], $r['skipped']);
+$csv = function (string $file, string $set, array $options = []) use ($dir): void {
+    $path = "$dir/$file";
+    if (!file_exists($path)) {
+        return;
+    }
+    $r = DataSets::importCsv($set, $path, $options);
+    printf("%-24s → %-16s %d imported/updated, %d skipped\n", $file, $set, $r['ok'], $r['skipped']);
+    foreach ($r['errors'] as $e) {
+        echo "    note: $e\n";
+    }
+};
+
+/* ---- 1. Content report (blog inventory with SEO metadata) ---- */
+$csv('content-report-2026.csv', 'content_items', ['defaults' => ['type' => 'blog']]);
+
+/* ---- 2. Email tracker (real campaign sends) ---- */
+$csv('email-tracker-2026.csv', 'email_campaigns');
+
+/* ---- 3. GSC monthly performance matrix ---- */
+$csv('gsc-performance-jan25-may26.csv', 'gsc_monthly');
+
+/* ---- 4. User acquisition (long format: month, channel, users, new users…) ---- */
+$uaFile = "$dir/user-acquisition-jan25-may26.csv";
+if (file_exists($uaFile)) {
+    $csv('user-acquisition-jan25-may26.csv', 'ga_channels'); // Total rows skipped by row filter
+
+    // Second pass: the "Total" rows carry site-level monthly users for ga_daily.
+    $fh = fopen($uaFile, 'r');
+    $cols = null;
+    $gaOk = 0;
+    while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
+        if ($cols === null) {
+            $lowered = array_map(fn ($c) => strtolower(trim((string) $c)), $cells);
+            $m = array_search('month', $lowered, true);
+            $c = array_search('channel', $lowered, true);
+            $u = array_search('total users', $lowered, true);
+            $n = array_search('new users', $lowered, true);
+            if ($m !== false && $c !== false && $u !== false) {
+                $cols = [$m, $c, $u, $n];
+            }
+            continue;
+        }
+        [$mI, $cI, $uI, $nI] = $cols;
+        if (strcasecmp(trim((string) ($cells[$cI] ?? '')), 'total') !== 0) {
+            continue;
+        }
+        $date  = DataSets::cleanDate($cells[$mI] ?? null);
+        $users = DataSets::cleanNumber($cells[$uI] ?? null);
+        if (!$date || $users === null) {
+            continue;
+        }
+        $newUsers = $nI !== false ? DataSets::cleanNumber($cells[$nI] ?? null) : null;
+        DB::run(
+            'INSERT INTO ga_daily (date, users, new_users) VALUES (:d, :u, :n)
+             ON CONFLICT(date) DO UPDATE SET users = excluded.users,
+               new_users = CASE WHEN excluded.new_users > 0 THEN excluded.new_users ELSE ga_daily.new_users END',
+            [':d' => $date, ':u' => (int) $users, ':n' => (int) ($newUsers ?? 0)]
+        );
+        $gaOk++;
+    }
+    fclose($fh);
+    printf("%-24s → %-16s %d monthly user totals\n", 'user-acquisition (totals)', 'ga_daily', $gaOk);
 }
 
-/* ---- 2. Traffic report: GSC monthly section ---- */
-$trafficFile = $dir . '/website-traffic-jan25-may26.csv';
+/* ---- 5. Older traffic report (GSC matrix + channel sessions + session totals) ---- */
+$trafficFile = "$dir/website-traffic-jan25-may26.csv";
 if (file_exists($trafficFile)) {
-    $r = DataSets::importCsv('gsc_monthly', $trafficFile);
-    printf("gsc_daily:        %d months imported\n", $r['ok']);
+    $csv('website-traffic-jan25-may26.csv', 'gsc_monthly');
 
-    /* ---- 3. Channel sections, measure detected from the section title ---- */
     $fh = fopen($trafficFile, 'r');
-    $measure = null;   // users | sessions | null (ignore)
+    $measure = null;
     $months  = [];
     $chOk    = 0;
-    $totals  = [];     // measure → [date => total]
+    $totals  = [];
     $skipLabels = ['total', 'metric', 'channel', 'clicks', 'impressions', 'ctr',
                    'position', 'avg_position', 'average_position'];
     while (($cells = fgetcsv($fh, null, ",", "\"", "")) !== false) {
         $first = trim((string) ($cells[0] ?? ''));
         $lower = strtolower($first);
-
         if (str_contains($lower, 'user acquisition by channel')) {
             $measure = 'users';
             $months = [];
@@ -60,7 +115,6 @@ if (file_exists($trafficFile)) {
             $months = [];
             continue;
         }
-        // Any other section title (overviews, search performance) ends channel parsing
         if (str_contains($lower, 'overview') || str_contains($lower, 'search performance')) {
             $measure = null;
             $months = [];
@@ -77,8 +131,7 @@ if (file_exists($trafficFile)) {
             continue;
         }
         $norm = preg_replace('/[^a-z0-9]+/', '_', $lower);
-        if ($first === '' || in_array($norm, $skipLabels, true)) {
-            // Keep the Total row for the site-level ga_daily rollup
+        if (in_array($norm, $skipLabels, true)) {
             if ($norm === 'total') {
                 foreach ($months as $i => $date) {
                     $n = DataSets::cleanNumber($cells[$i] ?? null);
@@ -103,22 +156,23 @@ if (file_exists($trafficFile)) {
         $chOk++;
     }
     fclose($fh);
-    printf("ga_channels:      %d channel rows imported (users + sessions)\n", $chOk);
+    printf("%-24s → %-16s %d channel rows\n", 'website-traffic (channels)', 'ga_channels', $chOk);
 
-    /* ---- 4. Site-level monthly totals into ga_daily ---- */
     $gaOk = 0;
     $allDates = array_unique(array_merge(array_keys($totals['sessions'] ?? []), array_keys($totals['users'] ?? [])));
     foreach ($allDates as $date) {
         DB::run(
             'INSERT INTO ga_daily (date, sessions, users) VALUES (:d, :s, :u)
-             ON CONFLICT(date) DO UPDATE SET sessions = excluded.sessions, users = excluded.users',
+             ON CONFLICT(date) DO UPDATE SET
+               sessions = CASE WHEN excluded.sessions > 0 THEN excluded.sessions ELSE ga_daily.sessions END,
+               users    = CASE WHEN excluded.users    > 0 THEN excluded.users    ELSE ga_daily.users    END',
             [':d' => $date,
              ':s' => $totals['sessions'][$date] ?? 0,
              ':u' => $totals['users'][$date] ?? 0]
         );
         $gaOk++;
     }
-    printf("ga_daily:         %d monthly totals imported\n", $gaOk);
+    printf("%-24s → %-16s %d monthly session totals\n", 'website-traffic (totals)', 'ga_daily', $gaOk);
 }
 
 echo "Done. Monthly figures are stored on the 1st of each month.\n";

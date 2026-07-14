@@ -41,24 +41,28 @@ $totalConv = array_sum(array_column($rows, 'conversions'));
   <div class="table-wrap">
     <table class="data">
       <tr>
-        <th>Title</th><th>Author</th><th>Published</th>
-        <th class="num">Pageviews</th><th class="num">Visitors</th>
-        <th class="num">Avg time</th><th class="num">Bounce</th><th class="num">Conversions</th><th></th>
+        <th>Title</th><th>Funnel</th><th>Author</th><th>Published</th>
+        <th>Target keyword</th><th class="num">Kw pos</th><th class="num">Volume</th>
+        <th class="num">Views</th><th class="num">Pageviews</th><th class="num">Visitors</th>
+        <th class="num">Conversions</th><th></th>
       </tr>
       <?php foreach ($rows as $r): ?>
       <tr>
         <td><a href="<?= h($r['url']) ?>" target="_blank" rel="noopener"><span class="truncate"><?= h($r['title']) ?></span></a></td>
-        <td><?= h($r['author']) ?></td>
-        <td><?= h($r['published_at']) ?></td>
+        <td><?= $r['funnel_stage'] ? '<span class="badge">' . h($r['funnel_stage']) . '</span>' : '—' ?></td>
+        <td><?= h((string) $r['author']) ?></td>
+        <td style="white-space:nowrap"><?= h((string) $r['published_at']) ?></td>
+        <td><span class="truncate" style="max-width:180px"><?= h((string) $r['target_keyword']) ?></span></td>
+        <td class="num"><?= h((string) ($r['keyword_position'] ?: '—')) ?></td>
+        <td class="num"><?= $r['search_volume'] ? fmt_num($r['search_volume']) : '—' ?></td>
+        <td class="num"><?= $r['views'] ? fmt_num($r['views']) : '—' ?></td>
         <td class="num"><?= fmt_num($r['pageviews']) ?></td>
         <td class="num"><?= fmt_num($r['visitors']) ?></td>
-        <td class="num"><?= fmt_duration($r['avg_time']) ?></td>
-        <td class="num"><?= fmt_pct($r['bounce_rate']) ?></td>
         <td class="num"><?= fmt_num($r['conversions']) ?></td>
         <td class="num"><?= delete_button('content_items', (int) $r['id']) ?></td>
       </tr>
       <?php endforeach; if (!$rows): ?>
-      <tr><td colspan="9">No <?= h(strtolower($types[$type])) ?> tracked yet.</td></tr>
+      <tr><td colspan="12">No <?= h(strtolower($types[$type])) ?> tracked yet.</td></tr>
       <?php endif; ?>
     </table>
   </div>

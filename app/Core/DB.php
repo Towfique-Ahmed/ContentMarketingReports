@@ -28,7 +28,8 @@ class DB
                     ('site_name', 'Analytio'),
                     ('sync_time', '06:00'),
                     ('timezone', 'UTC'),
-                    ('cron_token', '" . bin2hex(random_bytes(16)) . "')");
+                    ('cron_token', '" . bin2hex(random_bytes(16)) . "'),
+                    ('mcp_token', '" . bin2hex(random_bytes(16)) . "')");
             }
         }
         return self::$pdo;
@@ -38,6 +39,40 @@ class DB
     {
         $schema = file_get_contents(dirname(__DIR__, 2) . '/database/schema.sql');
         self::$pdo->exec($schema);
+
+        // Additive column migrations for databases created by older versions.
+        self::ensureColumns('content_items', [
+            'funnel_stage'     => 'TEXT',
+            'reviewer'         => 'TEXT',
+            'publisher'        => 'TEXT',
+            'target_keyword'   => 'TEXT',
+            'keyword_position' => 'TEXT',
+            'search_volume'    => 'INTEGER DEFAULT 0',
+            'ai_presence'      => 'TEXT',
+            'views'            => 'INTEGER DEFAULT 0',
+        ]);
+        self::ensureColumns('email_campaigns', [
+            'list_name' => 'TEXT',
+            'segment'   => 'TEXT',
+            'subject'   => 'TEXT',
+            'author'    => 'TEXT',
+        ]);
+        self::ensureColumns('ga_channels', [
+            'new_users' => 'INTEGER DEFAULT 0',
+        ]);
+    }
+
+    private static function ensureColumns(string $table, array $columns): void
+    {
+        $existing = [];
+        foreach (self::$pdo->query("PRAGMA table_info({$table})") as $col) {
+            $existing[$col['name']] = true;
+        }
+        foreach ($columns as $name => $definition) {
+            if (!isset($existing[$name])) {
+                self::$pdo->exec("ALTER TABLE {$table} ADD COLUMN {$name} {$definition}");
+            }
+        }
     }
 
     /** @return array<int, array<string, mixed>> */

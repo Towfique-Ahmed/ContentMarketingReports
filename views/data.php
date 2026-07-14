@@ -71,6 +71,17 @@
         <label>CSV file</label>
         <input type="file" name="csv" accept=".csv,text/csv" required>
       </div>
+      <?php if ($setKey === 'content_items'): ?>
+      <div class="field">
+        <label>If the file has no "type" column, treat every row as…</label>
+        <select name="default_type">
+          <option value="blog">Blog</option>
+          <option value="documentation">Documentation</option>
+          <option value="landing_page">Landing Page</option>
+          <option value="case_study">Case Study</option>
+        </select>
+      </div>
+      <?php endif; ?>
       <?php if (($set['matrix'] ?? '') === 'channels'): ?>
       <div class="field">
         <label>The numbers in the sheet are…</label>

@@ -114,6 +114,7 @@ class Reports
     {
         return DB::all(
             "SELECT ci.id, ci.title, ci.url, ci.author, ci.published_at,
+                    ci.funnel_stage, ci.target_keyword, ci.keyword_position, ci.search_volume, ci.views,
                     COALESCE(SUM(cm.pageviews),0) pageviews,
                     COALESCE(SUM(cm.visitors),0) visitors,
                     COALESCE(AVG(cm.avg_time),0) avg_time,
@@ -237,7 +238,7 @@ class Reports
     public static function emailTable(string $start, string $end): array
     {
         return DB::all(
-            'SELECT id, date, name, type, sent, delivered, opens, clicks, unsubscribes, notes
+            'SELECT id, date, name, type, list_name, subject, sent, delivered, opens, clicks, unsubscribes, notes
              FROM email_campaigns WHERE date BETWEEN :s AND :e ORDER BY date DESC',
             [':s' => $start, ':e' => $end]
         );
@@ -337,7 +338,7 @@ class Reports
             'email_sent'         => ['Emails sent',               'email_campaigns', 'SUM(sent)',        false],
             'email_opens'        => ['Email opens',               'email_campaigns', 'SUM(opens)',       false],
             'email_clicks'       => ['Email clicks',              'email_campaigns', 'SUM(clicks)',      false],
-            'email_open_rate'    => ['Email open rate %',         'email_campaigns', '100.0*SUM(opens)/NULLIF(SUM(delivered),0)', false],
+            'email_open_rate'    => ['Email open rate %',         'email_campaigns', '100.0*SUM(opens)/NULLIF(SUM(CASE WHEN delivered > 0 THEN delivered ELSE sent END),0)', false],
             'email_unsubs'       => ['Email unsubscribes',        'email_campaigns', 'SUM(unsubscribes)', true],
         ];
     }

@@ -48,15 +48,12 @@ $accentOk = $accent && preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent);
           if ($section !== ''): ?>
             <div class="nav-head"><?= h($section) ?></div>
           <?php endif;
-          foreach ($visible as [$label, $url, $navPage, $subKey]):
+          foreach ($visible as [$label, $url, $navPage, $subKey, $icon]):
               $active = ($page === $navPage) && ($subKey === null || $curSub === $subKey); ?>
-            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($url) ?>"><?= h($label) ?></a>
+            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= h($url) ?>"><span class="nav-icon"><?= h($icon) ?></span><?= h($label) ?></a>
           <?php endforeach;
       endforeach; ?>
     </nav>
-    <?php if (Settings::get('demo_mode') === '1'): ?>
-      <div class="demo-badge">Demo data — connect your accounts in Settings</div>
-    <?php endif; ?>
   </aside>
 
   <main class="main">

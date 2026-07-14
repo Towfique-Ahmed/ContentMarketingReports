@@ -35,7 +35,7 @@ php -S localhost:8000 -t public
 
 Open http://localhost:8000 — the first boot creates an **empty** database.
 Every report shows 0 until real data arrives, so connect your accounts in
-**Settings**, import CSVs, or add rows manually via the Data Manager (see below).
+**Settings**, import CSVs, or add rows manually via each report's manage panel (see below).
 
 To start over at any time, use *Settings → Delete all report data* (or just
 delete `storage/app.sqlite`).
@@ -68,13 +68,19 @@ delete `storage/app.sqlite`).
 
 Every dataset supports all three input methods:
 
+Each report page has a **"Manage data & settings"** panel (expand it at the
+bottom of the page) that controls exactly the datasets shown on that page —
+so content controls live on the Content report, search/analytics on the
+Search Performance report, and so on. Every panel offers all three methods,
+plus the settings and per-source **Sync now** button for that page.
+
 1. **Automated** — the daily API sync (Search Console, GA4, social platforms;
-   see below).
-2. **In-app manual entry** — *Data Manager* in the sidebar has an add/update
-   form for every dataset (GA totals, channels, Search Console, content,
-   social, campaigns, keywords, email campaigns). Saving with the same key
-   updates the row.
-3. **CSV import** — upload a file on the same Data Manager page. Download the
+   see below), or the per-page *Sync now* button for a single source.
+2. **In-app manual entry** — each page's manage panel has an add/update form
+   for its datasets (GA totals, channels, Search Console, content, social,
+   campaigns, keywords, email campaigns). Saving with the same key updates
+   the row.
+3. **CSV import** — upload a file in the same panel. Download the
    per-dataset template for the expected columns. The importer is tolerant of
    spreadsheet exports: it skips blank/padded rows, accepts `1,234`, `45.0%`
    and `–`, finds the header row after title rows, and matches columns by

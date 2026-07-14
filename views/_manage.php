@@ -86,6 +86,7 @@ $allSets = DataSets::all();
             <input type="hidden" name="set" value="<?= h($setKey) ?>">
             <input type="hidden" name="back" value="<?= h($back) ?>">
             <?php foreach ($set['fields'] as $name => $spec):
+                if ($spec['totals_only'] ?? false) { continue; }
                 $label = $spec['label'] ?? ucwords(str_replace('_', ' ', $name));
                 $req = ($spec['required'] ?? false) ? ' required' : ''; ?>
             <div class="field">

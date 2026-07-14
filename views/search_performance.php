@@ -45,6 +45,28 @@
     <?= delta_badge((float) $ga['conversions'], (float) $gaPrev['conversions']) ?>
   </div>
 </div>
+<div class="grid grid-4">
+  <div class="card stat">
+    <div class="stat-label">Engagement Rate</div>
+    <div class="stat-value"><?= fmt_pct($ga['engagement_rate'] ?? 0) ?></div>
+    <?= delta_badge((float) ($ga['engagement_rate'] ?? 0), (float) ($gaPrev['engagement_rate'] ?? 0)) ?>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Avg Session Duration</div>
+    <div class="stat-value"><?= fmt_duration($ga['avg_duration'] ?? 0) ?></div>
+    <?= delta_badge((float) ($ga['avg_duration'] ?? 0), (float) ($gaPrev['avg_duration'] ?? 0)) ?>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Bounce Rate</div>
+    <div class="stat-value"><?= fmt_pct($ga['bounce_rate'] ?? 0) ?></div>
+    <?= delta_badge((float) ($ga['bounce_rate'] ?? 0), (float) ($gaPrev['bounce_rate'] ?? 0), lowerIsBetter: true) ?>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Pageviews</div>
+    <div class="stat-value"><?= fmt_num($ga['pageviews'] ?? 0) ?></div>
+    <?= delta_badge((float) ($ga['pageviews'] ?? 0), (float) ($gaPrev['pageviews'] ?? 0)) ?>
+  </div>
+</div>
 
 <div class="grid grid-2">
   <div class="card">

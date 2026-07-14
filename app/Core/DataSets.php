@@ -51,6 +51,15 @@ class DataSets
                     'users'       => ['type' => 'int', 'aliases' => ['total_users']],
                     'new_users'   => ['type' => 'int'],
                     'conversions' => ['type' => 'int', 'aliases' => ['key_events']],
+                    // Site-level metrics carried on the "Total" row only: recognized
+                    // on import and routed to ga_daily, but never written to the
+                    // channel table and hidden from the channel form/template.
+                    'engagement_rate' => ['type' => 'float', 'totals_only' => true,
+                                          'aliases' => ['engagement_rate']],
+                    'avg_duration'    => ['type' => 'float', 'totals_only' => true,
+                                          'aliases' => ['avg_session_duration', 'avg_time_session', 'avg_duration_sec']],
+                    'bounce_rate'     => ['type' => 'float', 'totals_only' => true,
+                                          'aliases' => ['bounce_rate']],
                 ],
                 'row_filter' => 'channel_not_total',
                 // "Total"/"TOTAL" rollup rows in a long-format GA export are
@@ -59,7 +68,8 @@ class DataSets
                 // top-line Analytics numbers in a single upload.
                 'totals' => [
                     'table'   => 'ga_daily',
-                    'columns' => ['sessions', 'users', 'new_users', 'conversions'],
+                    'columns' => ['sessions', 'users', 'new_users', 'conversions',
+                                  'engagement_rate', 'avg_duration', 'bounce_rate'],
                 ],
             ],
             'gsc_daily' => [
@@ -317,6 +327,11 @@ class DataSets
 
         $row = [];
         foreach ($set['fields'] as $name => $spec) {
+            // Totals-only fields never belong to this table's own row (they are
+            // routed to the site-totals table for "Total" rows instead).
+            if ($spec['totals_only'] ?? false) {
+                continue;
+            }
             // Only write fields the caller actually provided — a CSV without a
             // "users" column must not zero out users stored by another import.
             if (!array_key_exists($name, $input) && !($spec['required'] ?? false)) {
@@ -488,7 +503,9 @@ class DataSets
             if (array_key_exists($col, $input)) {
                 $n = self::cleanNumber($input[$col] ?? null);
                 if ($n !== null) {
-                    $vals[$col] = (int) round($n);
+                    // Keep decimals for rate/duration columns; whole numbers land
+                    // in INTEGER columns fine via SQLite's numeric affinity.
+                    $vals[$col] = round($n, 2);
                 }
             }
         }
@@ -526,6 +543,9 @@ class DataSets
         $headers = [];
         $example = [];
         foreach ($set['fields'] as $name => $spec) {
+            if ($spec['totals_only'] ?? false) {
+                continue;
+            }
             if ($spec['type'] === 'lookup') {
                 [, $matchCol] = $spec['lookup'];
                 $headers[] = $matchCol;

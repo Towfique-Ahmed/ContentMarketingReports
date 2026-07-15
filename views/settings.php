@@ -198,7 +198,12 @@ landing_page=/features/"><?= $s('content_path_rules') ?></textarea>
     Add it as a <strong>custom connector</strong> in Claude (Settings → Connectors → Add custom connector)
     using this URL:
   </p>
-  <pre class="block">https://<?= h($_SERVER['HTTP_HOST'] ?? 'your-domain') ?>/?page=mcp&amp;token=<?= h(App\Core\Settings::get('mcp_token') ?? '') ?></pre>
+  <pre class="block">https://<?= h($_SERVER['HTTP_HOST'] ?? 'your-domain') ?>/mcp?token=<?= h(App\Core\Settings::get('mcp_token') ?? '') ?></pre>
+  <p class="hint">
+    The site must be reachable over <strong>public HTTPS</strong> for Claude to connect —
+    a localhost or intranet URL won't work. <code class="inline">/?page=mcp&amp;token=…</code> works too,
+    as does sending the token as an <code class="inline">Authorization: Bearer</code> header instead.
+  </p>
   <p class="hint">
     Available tools: overview report, metric time series, list/add/delete rows in any dataset, run sync.
     The token doubles as the password — regenerate it by editing the “MCP token” value in the General card

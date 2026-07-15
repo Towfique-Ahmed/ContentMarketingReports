@@ -16,6 +16,14 @@ use App\Services\SyncRunner;
 DB::conn(); // boot the database (creates an empty schema on first run)
 
 $page = $_GET['page'] ?? 'dashboard';
+
+// Clean-path aliases for machine endpoints: /mcp and /cron work in addition
+// to ?page=mcp / ?page=cron (some MCP clients and cron services mishandle
+// query-string-only endpoint URLs).
+$path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '', '/');
+if (!isset($_GET['page']) && in_array($path, ['/mcp', '/cron'], true)) {
+    $page = substr($path, 1);
+}
 [$start, $end, $prevStart, $prevEnd, $rangeLabel] = date_range();
 $common = compact('start', 'end', 'prevStart', 'prevEnd', 'rangeLabel', 'page');
 

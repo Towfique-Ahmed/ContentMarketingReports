@@ -28,10 +28,19 @@ class McpServer
         header('Content-Type: application/json');
 
         // --- Auth: ?token= or Authorization: Bearer ---
+        // Apache CGI/FastCGI (typical shared hosting) often strips the
+        // Authorization header from $_SERVER — check every known fallback.
         $token = Settings::get('mcp_token');
         $given = $_GET['token'] ?? '';
-        if (!$given && preg_match('/Bearer\s+(\S+)/i', $_SERVER['HTTP_AUTHORIZATION'] ?? '', $m)) {
-            $given = $m[1];
+        if (!$given) {
+            $auth = $_SERVER['HTTP_AUTHORIZATION']
+                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+                ?? (function_exists('apache_request_headers')
+                    ? (array_change_key_case(apache_request_headers())['authorization'] ?? '')
+                    : '');
+            if (preg_match('/Bearer\s+(\S+)/i', (string) $auth, $m)) {
+                $given = $m[1];
+            }
         }
         if (!$token || !hash_equals($token, (string) $given)) {
             http_response_code(401);

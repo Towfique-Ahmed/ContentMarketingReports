@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getDataset } from "@/lib/datasets/config";
 import { template } from "@/lib/datasets/import";
 
+export const dynamic = "force-dynamic";
+
 export function GET(req: NextRequest) {
   const set = req.nextUrl.searchParams.get("set") ?? "";
   if (!getDataset(set)) {

@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import * as schema from "./schema";
 
@@ -25,13 +26,30 @@ let _sqlite: Database.Database | null = null;
 let _db: DbClient | null = null;
 let migrated = false;
 
+function openAt(dbPath: string): Database.Database {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const s = new Database(dbPath);
+  s.pragma("journal_mode = WAL");
+  s.pragma("foreign_keys = ON");
+  return s;
+}
+
 function connect() {
   if (_sqlite) return;
-  const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "app.sqlite");
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  _sqlite = new Database(dbPath);
-  _sqlite.pragma("journal_mode = WAL");
-  _sqlite.pragma("foreign_keys = ON");
+  const configured = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "app.sqlite");
+  try {
+    _sqlite = openAt(configured);
+  } catch (e) {
+    // A non-writable data dir (e.g. DATABASE_PATH=/data on a locked-down host)
+    // must not take the whole site down. Fall back to a writable temp location
+    // and log loudly — data there is NOT persistent across restarts.
+    const fallback = path.join(os.tmpdir(), "analytio-data", "app.sqlite");
+    console.error(
+      `[db] Cannot open database at "${configured}" (${(e as Error).message}). ` +
+        `Falling back to "${fallback}". Set DATABASE_PATH to a writable path for persistent data.`,
+    );
+    _sqlite = openAt(fallback);
+  }
   _db = drizzle(_sqlite, { schema });
 }
 

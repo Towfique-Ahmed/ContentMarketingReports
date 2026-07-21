@@ -25,14 +25,15 @@ const config: Config = {
         success: { DEFAULT: "hsl(var(--success))", foreground: "hsl(var(--success-foreground))" },
         warning: { DEFAULT: "hsl(var(--warning))", foreground: "hsl(var(--warning-foreground))" },
         danger: { DEFAULT: "hsl(var(--danger))", foreground: "hsl(var(--danger-foreground))" },
-        // Categorical chart series (accessible, distinct in light + dark)
+        // Categorical chart series (validated palette from the dataviz skill;
+        // raw hex vars so both modes swap in one place)
         chart: {
-          1: "hsl(var(--chart-1))",
-          2: "hsl(var(--chart-2))",
-          3: "hsl(var(--chart-3))",
-          4: "hsl(var(--chart-4))",
-          5: "hsl(var(--chart-5))",
-          6: "hsl(var(--chart-6))",
+          1: "var(--chart-1)",
+          2: "var(--chart-2)",
+          3: "var(--chart-3)",
+          4: "var(--chart-4)",
+          5: "var(--chart-5)",
+          6: "var(--chart-6)",
         },
       },
       borderRadius: {

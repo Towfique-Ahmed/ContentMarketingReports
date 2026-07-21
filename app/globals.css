@@ -37,12 +37,13 @@
   --danger: 0 72% 47%;
   --danger-foreground: 0 0% 100%;
 
-  --chart-1: 231 60% 55%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 27 87% 52%;
-  --chart-4: 291 47% 51%;
-  --chart-5: 200 70% 46%;
-  --chart-6: 340 65% 52%;
+  /* Validated categorical palette (dataviz skill), light steps. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
 }
 
 .dark {
@@ -72,12 +73,13 @@
   --danger: 0 70% 62%;
   --danger-foreground: 0 40% 10%;
 
-  --chart-1: 231 66% 68%;
-  --chart-2: 173 55% 52%;
-  --chart-3: 27 88% 62%;
-  --chart-4: 291 55% 68%;
-  --chart-5: 200 72% 60%;
-  --chart-6: 340 70% 66%;
+  /* Same hues, stepped for the dark surface (selected, not flipped). */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
 }
 
 * {

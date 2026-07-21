@@ -1,12 +1,12 @@
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as schema from "./schema";
+import { SCHEMA_SQL } from "./ddl";
 
 /*
  * Single shared better-sqlite3 connection, opened LAZILY on first real use.
@@ -53,14 +53,13 @@ function connect() {
   _db = drizzle(_sqlite, { schema });
 }
 
-/** Open the connection, run migrations, and seed defaults. Idempotent. */
+/** Open the connection, create the schema, and seed defaults. Idempotent. */
 export function ensureDb() {
   connect();
   if (migrated) return;
-  const migrationsFolder = path.join(process.cwd(), "drizzle");
-  if (fs.existsSync(migrationsFolder)) {
-    migrate(_db!, { migrationsFolder });
-  }
+  // Create tables from bundled idempotent DDL — no dependency on the drizzle/
+  // migrations folder, which isn't present in standalone output.
+  _sqlite!.exec(SCHEMA_SQL);
   const token = () => crypto.randomBytes(16).toString("hex");
   _db!.run(sql`
     INSERT OR IGNORE INTO settings (key, value) VALUES

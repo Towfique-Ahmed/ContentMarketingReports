@@ -96,11 +96,16 @@ export default async function SettingsPage() {
           <CardHeader><CardTitle>Claude MCP connector</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p className="text-muted-foreground">
-              Add this as a custom connector in Claude (needs public HTTPS):
+              In Claude, add a <strong>custom connector</strong> (needs public HTTPS) with this URL:
             </p>
-            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
-              https://{host}/api/mcp?token={mcpToken}
-            </pre>
+            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">https://{host}/api/mcp</pre>
+            <p className="text-muted-foreground">
+              Claude runs an OAuth sign-in — on the approval screen, paste your <strong>MCP token</strong> below:
+            </p>
+            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{mcpToken}</pre>
+            <p className="text-xs text-muted-foreground">
+              (Programmatic clients can still use <code>…/api/mcp?token=…</code> directly.)
+            </p>
           </CardContent>
         </Card>
 

@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens. Every color is an HSL triplet so Tailwind can apply opacity.
+ * Light and dark are both first-class; contrast targets WCAG AA (>=4.5:1 for
+ * text). Chart series are refined in Phase 2 with the dataviz skill.
+ */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius: 0.75rem;
+
+  --background: 210 20% 98%;
+  --foreground: 222 24% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 24% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 24% 12%;
+  --muted: 220 16% 95%;
+  --muted-foreground: 220 10% 40%;
+  --border: 220 15% 89%;
+  --input: 220 15% 89%;
+  --ring: 231 55% 52%;
+
+  --primary: 231 55% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 16% 95%;
+  --secondary-foreground: 222 24% 20%;
+  --accent: 231 48% 96%;
+  --accent-foreground: 231 55% 38%;
+
+  --success: 152 56% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 35 92% 42%;
+  --warning-foreground: 0 0% 100%;
+  --danger: 0 72% 47%;
+  --danger-foreground: 0 0% 100%;
+
+  --chart-1: 231 60% 55%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 27 87% 52%;
+  --chart-4: 291 47% 51%;
+  --chart-5: 200 70% 46%;
+  --chart-6: 340 65% 52%;
+}
+
+.dark {
+  --background: 222 26% 8%;
+  --foreground: 210 20% 92%;
+  --card: 222 22% 11%;
+  --card-foreground: 210 20% 92%;
+  --popover: 222 22% 11%;
+  --popover-foreground: 210 20% 92%;
+  --muted: 217 19% 17%;
+  --muted-foreground: 215 16% 64%;
+  --border: 217 19% 21%;
+  --input: 217 19% 24%;
+  --ring: 231 60% 66%;
+
+  --primary: 231 62% 64%;
+  --primary-foreground: 222 40% 10%;
+  --secondary: 217 19% 17%;
+  --secondary-foreground: 210 20% 92%;
+  --accent: 231 30% 20%;
+  --accent-foreground: 231 62% 80%;
+
+  --success: 152 50% 50%;
+  --success-foreground: 152 40% 8%;
+  --warning: 35 90% 58%;
+  --warning-foreground: 35 40% 10%;
+  --danger: 0 70% 62%;
+  --danger-foreground: 0 40% 10%;
+
+  --chart-1: 231 66% 68%;
+  --chart-2: 173 55% 52%;
+  --chart-3: 27 88% 62%;
+  --chart-4: 291 55% 68%;
+  --chart-5: 200 72% 60%;
+  --chart-6: 340 70% 66%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Consistent, visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Utility for skip-link + screen-reader-only content. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,29 @@
-storage/*.sqlite
-storage/*.sqlite-wal
-storage/*.sqlite-shm
-storage/*.log
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+# production
+/build
+
+# database (single-file SQLite lives here; keep the dir, ignore the data)
+/data/*
+!/data/.gitkeep
+
+# testing
+/coverage
+/playwright-report
+/test-results
+
+# misc
 .DS_Store
-vendor/
+*.pem
+.env
+.env*.local
+npm-debug.log*

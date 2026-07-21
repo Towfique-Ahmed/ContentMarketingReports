@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "node test/e2e/smoke.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
     "seed:sample": "tsx scripts/seed-sample.ts"
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.0.3",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.2",
+    "playwright-core": "^1.49.1",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",

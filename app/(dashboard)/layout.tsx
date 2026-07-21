@@ -1,6 +1,10 @@
 import { SidebarNav } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
+// Every report reads live data per request — never prerender at build time
+// (which would also try to open the database in a read-only build sandbox).
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">

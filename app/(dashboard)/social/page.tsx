@@ -12,6 +12,7 @@ import { fmtNum, fmtPct } from "@/lib/format";
 import { socialPosts, socialSeries, socialTotals } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
 import { cn } from "@/lib/utils";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Social" };
 type Row = Record<string, unknown>;
@@ -54,6 +55,8 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       ) : (
         <OverviewView totals={totals} sp={sp} />
       )}
+
+      <ManagePanel pageKey="social" />
     </>
   );
 }

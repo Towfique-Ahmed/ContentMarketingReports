@@ -10,6 +10,7 @@ import { paginateRows, type SearchParams } from "@/lib/paginate";
 import { fmtNum } from "@/lib/format";
 import { keywordTable } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Keywords" };
 type Row = Record<string, unknown>;
@@ -60,6 +61,8 @@ export default async function KeywordsPage({ searchParams }: { searchParams: Pro
           <p className="mt-2 text-xs text-muted-foreground">Change compares the end of the range with its start.</p>
         </CardContent>
       </Card>
+
+      <ManagePanel pageKey="keywords" />
     </>
   );
 }

@@ -9,6 +9,7 @@ import { paginateRows, type SearchParams } from "@/lib/paginate";
 import { fmtMoney, fmtNum, fmtPct } from "@/lib/format";
 import { campaignTable } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Campaigns" };
 type Row = Record<string, unknown>;
@@ -66,6 +67,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           <DataTable columns={cols} rows={table.rows} state={table.state} caption="All campaigns" empty="No campaigns yet — add them from the manage panel." />
         </CardContent>
       </Card>
+
+      <ManagePanel pageKey="campaigns" />
     </>
   );
 }

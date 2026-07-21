@@ -12,6 +12,7 @@ import { fmtNum } from "@/lib/format";
 import { contentSeries, contentTable } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
 import { cn } from "@/lib/utils";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Content" };
 
@@ -109,6 +110,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
           <DataTable columns={cols} rows={table.rows} state={table.state} caption={`All ${TYPES[type]}`} empty={`No ${TYPES[type].toLowerCase()} tracked yet.`} />
         </CardContent>
       </Card>
+
+      <ManagePanel pageKey="content" />
     </>
   );
 }

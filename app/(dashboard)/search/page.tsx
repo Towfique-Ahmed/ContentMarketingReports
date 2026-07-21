@@ -20,6 +20,7 @@ import {
   gscTotals,
 } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Search & Traffic" };
 
@@ -156,6 +157,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           <DataTable columns={gaPageCols} rows={gaPages.rows} state={gaPages.state} caption="Top pages by traffic" empty="No GA page data for this range." />
         </CardContent>
       </Card>
+
+      <ManagePanel pageKey="search" />
     </>
   );
 }

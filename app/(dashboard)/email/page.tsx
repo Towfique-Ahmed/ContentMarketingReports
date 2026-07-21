@@ -10,6 +10,7 @@ import { paginateRows, type SearchParams } from "@/lib/paginate";
 import { fmtNum, fmtPct } from "@/lib/format";
 import { emailMonthly, emailTable, emailTotals } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Email" };
 type Row = Record<string, unknown>;
@@ -74,6 +75,8 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
           <DataTable columns={cols} rows={table.rows} state={table.state} caption="All email campaigns" empty="No email campaigns in this range — add them from the manage panel." />
         </CardContent>
       </Card>
+
+      <ManagePanel pageKey="email" />
     </>
   );
 }

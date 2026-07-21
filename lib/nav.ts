@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   CalendarRange,
   FileText,
   GitCompareArrows,
@@ -44,8 +43,7 @@ export const NAV: NavSection[] = [
   {
     label: "Reporting",
     items: [
-      { key: "monthly", label: "Monthly", href: "/reports/monthly", icon: CalendarRange },
-      { key: "yearly", label: "Yearly", href: "/reports/yearly", icon: BarChart3 },
+      { key: "monthly", label: "Monthly & Yearly", href: "/reports/monthly", icon: CalendarRange },
       { key: "compare", label: "Compare", href: "/reports/compare", icon: GitCompareArrows },
     ],
   },

@@ -1,15 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { RangePicker } from "@/components/layout/range-picker";
-import { KpiCard, KpiGrid } from "@/components/reports/kpi-card";
-import { DataTable, type Column } from "@/components/reports/data-table";
-import { ChartCard } from "@/components/charts/chart-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { getRange, str } from "@/lib/params";
-import { buildHref, paginateRows, type SearchParams } from "@/lib/paginate";
+import { buildHref, type SearchParams } from "@/lib/paginate";
 import { fmtNum } from "@/lib/format";
-import { contentSeries, contentTable } from "@/lib/reports/queries";
+import { contentByType } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
 import { cn } from "@/lib/utils";
 import { ManagePanel } from "@/components/manage/manage-panel";
@@ -25,50 +21,41 @@ const TYPES: Record<string, string> = {
 
 type Row = Record<string, unknown>;
 
+function monthKey(published: unknown): string {
+  const s = String(published ?? "");
+  return /^\d{4}-\d{2}/.test(s) ? s.slice(0, 7) : "0000-00";
+}
+function monthLabel(ym: string): string {
+  if (ym === "0000-00") return "No publish date";
+  const [y, m] = ym.split("-");
+  return new Date(Date.UTC(Number(y), Number(m) - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export default async function ContentPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   ensureDb();
   const sp = await searchParams;
-  const r = getRange(sp);
   const type = TYPES[str(sp.type) ?? ""] ? (str(sp.type) as string) : "blog";
+  const items = contentByType(type) as Row[];
 
-  const rows = contentTable(type, r.start, r.end) as Row[];
-  const series = contentSeries(type, r.start, r.end) as Row[];
-  const totalPv = rows.reduce((a, x) => a + Number(x.pageviews), 0);
-  const totalVis = rows.reduce((a, x) => a + Number(x.visitors), 0);
-  const totalConv = rows.reduce((a, x) => a + Number(x.conversions), 0);
-
-  const table = paginateRows(rows, {
-    sortable: ["title", "funnel_stage", "author", "published_at", "search_volume", "views", "pageviews", "visitors", "conversions"],
-    defaultSort: "pageviews",
-    params: sp,
-  });
-
-  const cols: Column<Row>[] = [
-    {
-      key: "title",
-      label: "Title",
-      sortable: true,
-      render: (x) => (
-        <a href={String(x.url)} target="_blank" rel="noopener" className="line-clamp-1 text-primary hover:underline">
-          {String(x.title)}
-        </a>
-      ),
-    },
-    { key: "funnel_stage", label: "Funnel", sortable: true, render: (x) => (x.funnel_stage ? <span className="rounded-full border border-border px-2 py-0.5 text-xs">{String(x.funnel_stage)}</span> : "—") },
-    { key: "author", label: "Author", sortable: true, render: (x) => String(x.author ?? "—") },
-    { key: "published_at", label: "Published", sortable: true, render: (x) => String(x.published_at ?? "—") },
-    { key: "search_volume", label: "Volume", align: "right", sortable: true, render: (x) => (x.search_volume ? fmtNum(Number(x.search_volume)) : "—") },
-    { key: "views", label: "Views", align: "right", sortable: true, render: (x) => (x.views ? fmtNum(Number(x.views)) : "—") },
-    { key: "pageviews", label: "Pageviews", align: "right", sortable: true, render: (x) => fmtNum(Number(x.pageviews)) },
-    { key: "visitors", label: "Visitors", align: "right", sortable: true, render: (x) => fmtNum(Number(x.visitors)) },
-    { key: "conversions", label: "Conv.", align: "right", sortable: true, render: (x) => fmtNum(Number(x.conversions)) },
-  ];
+  // Group by publish month, newest month first (spreadsheet layout).
+  const groups = new Map<string, Row[]>();
+  for (const it of items) {
+    const k = monthKey(it.published_at);
+    (groups.get(k) ?? groups.set(k, []).get(k)!).push(it);
+  }
+  const months = [...groups.keys()].sort().reverse();
+  const totalViews = items.reduce((a, x) => a + Number(x.views ?? 0), 0);
 
   return (
     <>
-      <PageHeader title="Content" description={r.label}>
-        <RangePicker />
-      </PageHeader>
+      <PageHeader
+        title="Content"
+        description={`${items.length} ${TYPES[type].toLowerCase()} · ${fmtNum(totalViews)} views · grouped by month`}
+      />
 
       <div role="tablist" aria-label="Content type" className="mb-4 flex flex-wrap gap-1 border-b border-border">
         {Object.entries(TYPES).map(([key, label]) => (
@@ -87,29 +74,62 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
         ))}
       </div>
 
-      <KpiGrid>
-        <KpiCard label="Published items" value={String(rows.length)} />
-        <KpiCard label="Pageviews" value={fmtNum(totalPv)} />
-        <KpiCard label="Visitors" value={fmtNum(totalVis)} />
-        <KpiCard label="Conversions" value={fmtNum(totalConv)} />
-      </KpiGrid>
-
-      <div className="mt-4">
-        <ChartCard
-          title={`${TYPES[type]} traffic over time`}
-          type="area"
-          data={series}
-          xKey="date"
-          series={[{ key: "pageviews", label: "Pageviews" }, { key: "visitors", label: "Visitors" }]}
-        />
-      </div>
-
-      <Card className="mt-4">
-        <CardHeader><CardTitle>All {TYPES[type].toLowerCase()}</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable columns={cols} rows={table.rows} state={table.state} caption={`All ${TYPES[type]}`} empty={`No ${TYPES[type].toLowerCase()} tracked yet.`} />
-        </CardContent>
-      </Card>
+      {items.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-muted-foreground">
+          No {TYPES[type].toLowerCase()} tracked yet. Import your content report or add items in the manage panel below.
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {months.map((ym) => (
+            <section key={ym} aria-label={monthLabel(ym)}>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold text-foreground">{monthLabel(ym)}</h2>
+                <span className="text-xs text-muted-foreground">{groups.get(ym)!.length} items</span>
+              </div>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="px-3 py-2 font-semibold">Published</th>
+                      <th className="px-3 py-2 font-semibold">Topic</th>
+                      <th className="px-3 py-2 font-semibold">Funnel</th>
+                      <th className="px-3 py-2 font-semibold">Author</th>
+                      <th className="px-3 py-2 font-semibold">Reviewer</th>
+                      <th className="px-3 py-2 font-semibold">Publisher</th>
+                      <th className="px-3 py-2 font-semibold">Target keyword</th>
+                      <th className="px-3 py-2 text-right font-semibold">Kw pos</th>
+                      <th className="px-3 py-2 font-semibold">AI presence</th>
+                      <th className="px-3 py-2 text-right font-semibold">Views</th>
+                      <th className="px-3 py-2 text-right font-semibold">Volume</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groups.get(ym)!.map((x) => (
+                      <tr key={String(x.id)} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
+                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{String(x.published_at ?? "—")}</td>
+                        <td className="px-3 py-2">
+                          <a href={String(x.url)} target="_blank" rel="noopener" className="line-clamp-1 max-w-[26rem] text-primary hover:underline">
+                            {String(x.title)}
+                          </a>
+                        </td>
+                        <td className="px-3 py-2">{x.funnel_stage ? <span className="rounded-full border border-border px-2 py-0.5">{String(x.funnel_stage)}</span> : "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{String(x.author ?? "—")}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{String(x.reviewer ?? "—")}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{String(x.publisher ?? "—")}</td>
+                        <td className="px-3 py-2"><span className="line-clamp-1 max-w-[16rem]">{String(x.target_keyword ?? "—")}</span></td>
+                        <td className="px-3 py-2 text-right">{String(x.keyword_position ?? "—")}</td>
+                        <td className="px-3 py-2"><span className="line-clamp-1 max-w-[12rem]">{String(x.ai_presence ?? "—")}</span></td>
+                        <td className="px-3 py-2 text-right tabular-nums">{x.views ? fmtNum(Number(x.views)) : "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{x.search_volume ? fmtNum(Number(x.search_volume)) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </section>
+          ))}
+        </div>
+      )}
 
       <ManagePanel pageKey="content" />
     </>

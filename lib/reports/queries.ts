@@ -110,6 +110,26 @@ export function contentSeries(type: string, start: string, end: string) {
   );
 }
 
+/** All content of a type with its full metadata, newest first (no date filter). */
+export function contentByType(type: string) {
+  return all(
+    `SELECT id, title, url, author, published_at, funnel_stage, reviewer, publisher,
+            target_keyword, keyword_position, ai_presence, search_volume, views
+     FROM content_items WHERE type = ? ORDER BY published_at DESC, id DESC`,
+    type,
+  );
+}
+
+/** Count of content items published per month (YYYY-MM), for a given year. */
+export function contentCountsByMonth(year: number): Map<string, number> {
+  const rows = all<{ ym: string; c: number }>(
+    `SELECT strftime('%Y-%m', published_at) ym, COUNT(*) c FROM content_items
+     WHERE strftime('%Y', published_at) = ? GROUP BY ym`,
+    String(year),
+  );
+  return new Map(rows.map((r) => [r.ym, r.c]));
+}
+
 /* ---------- Social ---------- */
 export function socialTotals(start: string, end: string) {
   return all(

@@ -1,11 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Self-contained server output for Docker/VPS deploys.
-  output: "standalone",
+  // Run with `next start` (xCloud/PM2 default). No `output: standalone` — it
+  // conflicts with `next start` and adds a memory-heavy trace step to the build.
   // better-sqlite3 is a native module — keep it external to the server bundle.
   serverExternalPackages: ["better-sqlite3"],
   eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: false },
+  // Type-check runs in CI / `npm run typecheck`; skip it during the production
+  // build so low-RAM hosts don't OOM running tsc alongside the compiler.
+  typescript: { ignoreBuildErrors: true },
+  // Lower peak memory during compilation — important on small instances where
+  // `next build` was getting OOM-killed (SIGKILL).
+  experimental: { webpackMemoryOptimizations: true },
+  productionBrowserSourceMaps: false,
   async rewrites() {
     // OAuth discovery lives at well-known paths; map them to the API routes
     // (Next's file router won't serve a literal ".well-known" folder).

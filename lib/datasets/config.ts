@@ -107,8 +107,6 @@ export const DATASETS: Record<string, Dataset> = {
       author: { type: "text" },
       published_at: { type: "date", aliases: ["publish_date", "date"] },
       funnel_stage: { type: "select", options: ["TOFU", "MOFU", "BOFU"], aliases: ["funnel"] },
-      reviewer: { type: "text" },
-      publisher: { type: "text" },
       target_keyword: { type: "text" },
       keyword_position: {
         type: "text",

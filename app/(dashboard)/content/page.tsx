@@ -8,6 +8,7 @@ import { fmtNum } from "@/lib/format";
 import { contentByType } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
 import { cn } from "@/lib/utils";
+import { groupByMonth, monthLabel } from "@/lib/month";
 import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Content" };
@@ -21,20 +22,6 @@ const TYPES: Record<string, string> = {
 
 type Row = Record<string, unknown>;
 
-function monthKey(published: unknown): string {
-  const s = String(published ?? "");
-  return /^\d{4}-\d{2}/.test(s) ? s.slice(0, 7) : "0000-00";
-}
-function monthLabel(ym: string): string {
-  if (ym === "0000-00") return "No publish date";
-  const [y, m] = ym.split("-");
-  return new Date(Date.UTC(Number(y), Number(m) - 1, 1)).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 export default async function ContentPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   ensureDb();
   const sp = await searchParams;
@@ -42,12 +29,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   const items = contentByType(type) as Row[];
 
   // Group by publish month, newest month first (spreadsheet layout).
-  const groups = new Map<string, Row[]>();
-  for (const it of items) {
-    const k = monthKey(it.published_at);
-    (groups.get(k) ?? groups.set(k, []).get(k)!).push(it);
-  }
-  const months = [...groups.keys()].sort().reverse();
+  const months = groupByMonth(items, (it) => it.published_at);
   const totalViews = items.reduce((a, x) => a + Number(x.views ?? 0), 0);
 
   return (
@@ -80,11 +62,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
         </Card>
       ) : (
         <div className="space-y-6">
-          {months.map((ym) => (
+          {months.map(({ ym, rows }) => (
             <section key={ym} aria-label={monthLabel(ym)}>
               <div className="mb-2 flex items-baseline justify-between">
                 <h2 className="text-sm font-semibold text-foreground">{monthLabel(ym)}</h2>
-                <span className="text-xs text-muted-foreground">{groups.get(ym)!.length} items</span>
+                <span className="text-xs text-muted-foreground">{rows.length} items</span>
               </div>
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -94,8 +76,6 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
                       <th className="px-3 py-2 font-semibold">Topic</th>
                       <th className="px-3 py-2 font-semibold">Funnel</th>
                       <th className="px-3 py-2 font-semibold">Author</th>
-                      <th className="px-3 py-2 font-semibold">Reviewer</th>
-                      <th className="px-3 py-2 font-semibold">Publisher</th>
                       <th className="px-3 py-2 font-semibold">Target keyword</th>
                       <th className="px-3 py-2 text-right font-semibold">Kw pos</th>
                       <th className="px-3 py-2 font-semibold">AI presence</th>
@@ -104,7 +84,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
                     </tr>
                   </thead>
                   <tbody>
-                    {groups.get(ym)!.map((x) => (
+                    {rows.map((x) => (
                       <tr key={String(x.id)} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
                         <td className="whitespace-nowrap px-3 py-2 tabular-nums">{String(x.published_at ?? "—")}</td>
                         <td className="px-3 py-2">
@@ -114,8 +94,6 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
                         </td>
                         <td className="px-3 py-2">{x.funnel_stage ? <span className="rounded-full border border-border px-2 py-0.5">{String(x.funnel_stage)}</span> : "—"}</td>
                         <td className="whitespace-nowrap px-3 py-2">{String(x.author ?? "—")}</td>
-                        <td className="whitespace-nowrap px-3 py-2">{String(x.reviewer ?? "—")}</td>
-                        <td className="whitespace-nowrap px-3 py-2">{String(x.publisher ?? "—")}</td>
                         <td className="px-3 py-2"><span className="line-clamp-1 max-w-[16rem]">{String(x.target_keyword ?? "—")}</span></td>
                         <td className="px-3 py-2 text-right">{String(x.keyword_position ?? "—")}</td>
                         <td className="px-3 py-2"><span className="line-clamp-1 max-w-[12rem]">{String(x.ai_presence ?? "—")}</span></td>

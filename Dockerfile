@@ -15,9 +15,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV DATABASE_PATH=/data/app.sqlite
 
-# Next standalone output + static assets + migrations (needed at boot).
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Run with `next start` (matches the xCloud/PM2 setup). Ship the build, deps,
+# static assets, and migrations.
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/drizzle ./drizzle
 
@@ -27,4 +29,4 @@ VOLUME /data
 
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

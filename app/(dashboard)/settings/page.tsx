@@ -27,7 +27,19 @@ const GOOGLE: SettingField[] = [
   { name: "ga4_property_id", label: "GA4 numeric property ID" },
   { name: "site_base_url", label: "Website URL (content discovery)", placeholder: "https://example.com" },
   { name: "wp_username", label: "WordPress username" },
-  { name: "wp_app_password", label: "WordPress application password", type: "password" },
+  {
+    name: "wp_app_password",
+    label: "WordPress application password",
+    type: "password",
+    hint: "From WP Admin → Users → Profile → Application Passwords. Sync auto-discovers post types and pulls title, author, publish date, and (when the site exposes them in REST) the SEO focus keyword and view count.",
+  },
+  {
+    name: "content_type_map",
+    label: "Post-type mapping (optional)",
+    type: "textarea",
+    placeholder: "post=blog\ndocs=documentation\ncase-study=case_study\nlanding-page=landing_page",
+    hint: "Map your WordPress post-type slugs to report types, one per line. Leave blank to auto-detect (posts→blog, and slugs containing doc/case/landing are matched automatically).",
+  },
 ];
 
 const SOCIAL: SettingField[] = [

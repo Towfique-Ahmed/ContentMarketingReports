@@ -18,8 +18,10 @@ import {
   gscTopPages,
   gscTopQueries,
   gscTotals,
+  searchTrafficMonthly,
 } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { monthLabel } from "@/lib/month";
 import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Search & Traffic" };
@@ -57,6 +59,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     ns: "gp",
     params: sp,
   });
+  const monthly = searchTrafficMonthly();
 
   const queryCols: Column<Row>[] = [
     { key: "query", label: "Query", sortable: true, render: (x) => <span className="line-clamp-1">{String(x.query)}</span> },
@@ -155,6 +158,44 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <CardHeader><CardTitle>Top pages by traffic (GA4)</CardTitle></CardHeader>
         <CardContent>
           <DataTable columns={gaPageCols} rows={gaPages.rows} state={gaPages.state} caption="Top pages by traffic" empty="No GA page data for this range." />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 overflow-x-auto">
+        <CardHeader><CardTitle>Monthly breakdown</CardTitle></CardHeader>
+        <CardContent className="px-0">
+          {monthly.length === 0 ? (
+            <p className="px-6 py-8 text-center text-sm text-muted-foreground">No monthly data yet — run a sync or import Search Console / GA data.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-y border-border text-left text-muted-foreground">
+                  <th className="px-4 py-2 font-semibold">Month</th>
+                  <th className="px-4 py-2 text-right font-semibold">Clicks</th>
+                  <th className="px-4 py-2 text-right font-semibold">Impressions</th>
+                  <th className="px-4 py-2 text-right font-semibold">CTR</th>
+                  <th className="px-4 py-2 text-right font-semibold">Avg pos.</th>
+                  <th className="px-4 py-2 text-right font-semibold">Sessions</th>
+                  <th className="px-4 py-2 text-right font-semibold">Users</th>
+                  <th className="px-4 py-2 text-right font-semibold">Conv.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthly.map((m) => (
+                  <tr key={m.ym} className="border-b border-border/60 last:border-0 hover:bg-muted/30">
+                    <td className="whitespace-nowrap px-4 py-2 font-medium">{monthLabel(m.ym)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(m.clicks)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(m.impressions)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.ctr ? fmtPct(m.ctr) : "—"}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.position ? m.position.toFixed(1) : "—"}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(m.sessions)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(m.users)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(m.conversions)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
 

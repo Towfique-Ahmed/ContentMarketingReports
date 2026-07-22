@@ -76,6 +76,34 @@ export function gaTopPages(start: string, end: string) {
   );
 }
 
+/** Combined GSC + GA metrics per month (newest first, all data) — Search & Traffic monthly view. */
+export function searchTrafficMonthly() {
+  const gsc = new Map<string, { clicks: number; impressions: number; ctr: number; position: number }>();
+  for (const r of all<{ ym: string; clicks: number; impressions: number; ctr: number; position: number }>(
+    `SELECT strftime('%Y-%m', date) ym, SUM(clicks) clicks, SUM(impressions) impressions,
+            AVG(ctr) ctr, AVG(position) position
+     FROM gsc_daily GROUP BY ym`,
+  )) gsc.set(r.ym, r);
+  const ga = new Map<string, { sessions: number; users: number; conversions: number; pageviews: number }>();
+  for (const r of all<{ ym: string; sessions: number; users: number; conversions: number; pageviews: number }>(
+    `SELECT strftime('%Y-%m', date) ym, SUM(sessions) sessions, SUM(users) users,
+            SUM(conversions) conversions, SUM(pageviews) pageviews
+     FROM ga_daily GROUP BY ym`,
+  )) ga.set(r.ym, r);
+  const months = [...new Set([...gsc.keys(), ...ga.keys()])].filter(Boolean).sort().reverse();
+  return months.map((ym) => ({
+    ym,
+    clicks: gsc.get(ym)?.clicks ?? 0,
+    impressions: gsc.get(ym)?.impressions ?? 0,
+    ctr: gsc.get(ym)?.ctr ?? 0,
+    position: gsc.get(ym)?.position ?? 0,
+    sessions: ga.get(ym)?.sessions ?? 0,
+    users: ga.get(ym)?.users ?? 0,
+    conversions: ga.get(ym)?.conversions ?? 0,
+    pageviews: ga.get(ym)?.pageviews ?? 0,
+  }));
+}
+
 /* ---------- Content ---------- */
 export function contentSummary(start: string, end: string) {
   return all(

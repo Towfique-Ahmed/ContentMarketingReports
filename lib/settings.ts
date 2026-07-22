@@ -25,7 +25,7 @@ export function allSettings(): Record<string, string> {
 /** Every settings key a form may write — shared allow-list. */
 export const ALLOWED_SETTINGS = [
   "site_name", "timezone", "sync_time", "cron_token", "mcp_token",
-  "site_base_url", "content_path_rules", "wp_username", "wp_app_password",
+  "site_base_url", "content_path_rules", "content_type_map", "wp_username", "wp_app_password",
   "content_exclude_blog", "content_exclude_documentation",
   "content_exclude_landing_page", "content_exclude_case_study",
   "brand_logo", "accent_color",

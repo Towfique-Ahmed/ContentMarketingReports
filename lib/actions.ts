@@ -85,6 +85,26 @@ export async function runSyncAction(_prev: ActionResult, formData: FormData): Pr
   }
 }
 
+/**
+ * Delete tracked keywords (and their ranking history) by id. Content-derived
+ * rows on the Keywords page aren't tracked keywords, so they're ignored here —
+ * they disappear only when their content item's target keyword is cleared.
+ */
+export async function deleteKeywordsAction(ids: number[]): Promise<ActionResult> {
+  try {
+    const clean = ids.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+    if (clean.length === 0) return { ok: false, message: "Nothing selected to delete." };
+    const { sqlite } = await import("./db/client");
+    const placeholders = clean.map(() => "?").join(",");
+    sqlite.prepare(`DELETE FROM keyword_rankings WHERE keyword_id IN (${placeholders})`).run(...clean);
+    const res = sqlite.prepare(`DELETE FROM keywords WHERE id IN (${placeholders})`).run(...clean);
+    revalidatePath("/", "layout");
+    return { ok: true, message: `Deleted ${res.changes} keyword${res.changes === 1 ? "" : "s"}.` };
+  } catch (e) {
+    return { ok: false, message: (e as Error).message };
+  }
+}
+
 /** Wipe all report data; settings/credentials are kept. */
 export async function clearDataAction(): Promise<void> {
   const tables = [

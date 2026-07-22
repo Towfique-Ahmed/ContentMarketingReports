@@ -76,6 +76,34 @@ export function gaTopPages(start: string, end: string) {
   );
 }
 
+/** Combined GSC + GA metrics per month (newest first, all data) — Search & Traffic monthly view. */
+export function searchTrafficMonthly() {
+  const gsc = new Map<string, { clicks: number; impressions: number; ctr: number; position: number }>();
+  for (const r of all<{ ym: string; clicks: number; impressions: number; ctr: number; position: number }>(
+    `SELECT strftime('%Y-%m', date) ym, SUM(clicks) clicks, SUM(impressions) impressions,
+            AVG(ctr) ctr, AVG(position) position
+     FROM gsc_daily GROUP BY ym`,
+  )) gsc.set(r.ym, r);
+  const ga = new Map<string, { sessions: number; users: number; conversions: number; pageviews: number }>();
+  for (const r of all<{ ym: string; sessions: number; users: number; conversions: number; pageviews: number }>(
+    `SELECT strftime('%Y-%m', date) ym, SUM(sessions) sessions, SUM(users) users,
+            SUM(conversions) conversions, SUM(pageviews) pageviews
+     FROM ga_daily GROUP BY ym`,
+  )) ga.set(r.ym, r);
+  const months = [...new Set([...gsc.keys(), ...ga.keys()])].filter(Boolean).sort().reverse();
+  return months.map((ym) => ({
+    ym,
+    clicks: gsc.get(ym)?.clicks ?? 0,
+    impressions: gsc.get(ym)?.impressions ?? 0,
+    ctr: gsc.get(ym)?.ctr ?? 0,
+    position: gsc.get(ym)?.position ?? 0,
+    sessions: ga.get(ym)?.sessions ?? 0,
+    users: ga.get(ym)?.users ?? 0,
+    conversions: ga.get(ym)?.conversions ?? 0,
+    pageviews: ga.get(ym)?.pageviews ?? 0,
+  }));
+}
+
 /* ---------- Content ---------- */
 export function contentSummary(start: string, end: string) {
   return all(
@@ -113,7 +141,7 @@ export function contentSeries(type: string, start: string, end: string) {
 /** All content of a type with its full metadata, newest first (no date filter). */
 export function contentByType(type: string) {
   return all(
-    `SELECT id, title, url, author, published_at, funnel_stage, reviewer, publisher,
+    `SELECT id, title, url, author, published_at, funnel_stage,
             target_keyword, keyword_position, ai_presence, search_volume, views
      FROM content_items WHERE type = ? ORDER BY published_at DESC, id DESC`,
     type,
@@ -217,6 +245,59 @@ export function emailMonthly(start: string, end: string) {
      FROM email_campaigns WHERE date BETWEEN ? AND ? GROUP BY ym ORDER BY ym`,
     start, end,
   );
+}
+/** Every email campaign, newest first (no date filter) — for the month-grouped view. */
+export function emailAll() {
+  return all(
+    `SELECT id, date, name, type, list_name, subject, sent, delivered, opens, clicks, unsubscribes, notes
+     FROM email_campaigns ORDER BY date DESC, id DESC`,
+  );
+}
+/** Every campaign with its lifetime metric totals, newest first (no date filter). */
+export function campaignAll() {
+  return all(
+    `SELECT c.id, c.name, c.channel, c.status, c.start_date, c.end_date, c.budget,
+            COALESCE(SUM(m.impressions),0) impressions, COALESCE(SUM(m.clicks),0) clicks,
+            COALESCE(SUM(m.conversions),0) conversions, COALESCE(SUM(m.cost),0) cost,
+            COALESCE(SUM(m.revenue),0) revenue
+     FROM campaigns c LEFT JOIN campaign_metrics m ON m.campaign_id = c.id
+     GROUP BY c.id ORDER BY c.start_date DESC, c.id DESC`,
+  );
+}
+
+/**
+ * Unified keyword list for the Keywords page: tracked keywords (with latest
+ * ranking + change) PLUS every content target keyword not already tracked, so
+ * a keyword set on the Content page auto-appears here.
+ */
+export type UnifiedKeyword = {
+  id: number;
+  source: "keyword" | "content";
+  keyword: string;
+  url: string | null;
+  position: string | null;
+  prev_position: number | null;
+  vol: number;
+  difficulty: number | null;
+};
+export function unifiedKeywords(): UnifiedKeyword[] {
+  const tracked = all<UnifiedKeyword>(
+    `SELECT k.id, 'keyword' source, k.keyword, k.target_url url,
+            CAST((SELECT position FROM keyword_rankings r WHERE r.keyword_id = k.id ORDER BY r.date DESC LIMIT 1) AS TEXT) position,
+            (SELECT position FROM keyword_rankings r WHERE r.keyword_id = k.id ORDER BY r.date DESC LIMIT 1 OFFSET 1) prev_position,
+            k.search_volume vol, k.difficulty
+     FROM keywords k`,
+  );
+  const content = all<UnifiedKeyword>(
+    `SELECT ci.id, 'content' source, ci.target_keyword keyword, ci.url,
+            ci.keyword_position position, NULL prev_position,
+            ci.search_volume vol, NULL difficulty
+     FROM content_items ci
+     WHERE ci.target_keyword IS NOT NULL AND TRIM(ci.target_keyword) <> ''
+       AND LOWER(ci.target_keyword) NOT IN (SELECT LOWER(keyword) FROM keywords)
+     GROUP BY LOWER(ci.target_keyword)`,
+  );
+  return [...tracked, ...content];
 }
 
 /* ---------- Data extent ---------- */

@@ -1,21 +1,22 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { RangePicker } from "@/components/layout/range-picker";
 import { KpiCard, KpiGrid } from "@/components/reports/kpi-card";
-import { DataTable, type Column } from "@/components/reports/data-table";
-import { ChartCard } from "@/components/charts/chart-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRange, str } from "@/lib/params";
-import { buildHref, paginateRows, type SearchParams } from "@/lib/paginate";
+import { str } from "@/lib/params";
+import { buildHref, type SearchParams } from "@/lib/paginate";
 import { fmtNum, fmtPct } from "@/lib/format";
 import { socialPosts, socialSeries, socialTotals } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
 import { cn } from "@/lib/utils";
+import { groupByMonth, monthLabel } from "@/lib/month";
 import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Social" };
 type Row = Record<string, unknown>;
+
+const ALL_START = "0000-01-01";
+const ALL_END = "9999-12-31";
 
 const PLATFORMS: Record<string, string> = {
   facebook: "Facebook",
@@ -27,17 +28,14 @@ const PLATFORMS: Record<string, string> = {
 export default async function SocialPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   ensureDb();
   const sp = await searchParams;
-  const r = getRange(sp);
   const platform = PLATFORMS[str(sp.platform) ?? ""] ? (str(sp.platform) as string) : null;
 
-  const totals = socialTotals(r.start, r.end) as Row[];
+  const totals = socialTotals(ALL_START, ALL_END) as Row[];
   const byPlatform = new Map(totals.map((t) => [String(t.platform), t]));
 
   return (
     <>
-      <PageHeader title={platform ? `${PLATFORMS[platform]} Report` : "Social Media Overview"} description={r.label}>
-        <RangePicker />
-      </PageHeader>
+      <PageHeader title={platform ? `${PLATFORMS[platform]} Report` : "Social Media Overview"} description="All-time · grouped by month" />
 
       <div role="tablist" aria-label="Platform" className="mb-4 flex flex-wrap gap-1 border-b border-border">
         <Link role="tab" aria-selected={!platform} href={buildHref(sp, { platform: null })} className={cn("border-b-2 px-3 py-2 text-sm font-medium", !platform ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
@@ -51,7 +49,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       </div>
 
       {platform ? (
-        <PlatformView platform={platform} sp={sp} start={r.start} end={r.end} totals={byPlatform.get(platform)} />
+        <PlatformView platform={platform} sp={sp} totals={byPlatform.get(platform)} />
       ) : (
         <OverviewView totals={totals} sp={sp} />
       )}
@@ -63,14 +61,6 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
 
 function OverviewView({ totals, sp }: { totals: Row[]; sp: SearchParams }) {
   const by = new Map(totals.map((t) => [String(t.platform), t]));
-  const cols: Column<Row>[] = [
-    { key: "platform", label: "Platform", render: (x) => <Link href={buildHref(sp, { platform: String(x.platform) })} className="text-primary hover:underline">{PLATFORMS[String(x.platform)] ?? String(x.platform)}</Link> },
-    { key: "followers", label: "Followers", align: "right", render: (x) => fmtNum(Number(x.followers)) },
-    { key: "impressions", label: "Impr.", align: "right", render: (x) => fmtNum(Number(x.impressions)) },
-    { key: "engagements", label: "Engagements", align: "right", render: (x) => fmtNum(Number(x.engagements)) },
-    { key: "eng_rate", label: "Eng. rate", align: "right", render: (x) => (Number(x.impressions) ? fmtPct((Number(x.engagements) / Number(x.impressions)) * 100) : "—") },
-    { key: "clicks", label: "Clicks", align: "right", render: (x) => fmtNum(Number(x.clicks)) },
-  ];
   return (
     <>
       <KpiGrid>
@@ -79,40 +69,49 @@ function OverviewView({ totals, sp }: { totals: Row[]; sp: SearchParams }) {
           return <KpiCard key={key} label={`${label} followers`} value={fmtNum(Number(t?.followers ?? 0))} hint={`${fmtNum(Number(t?.engagements ?? 0))} eng.`} />;
         })}
       </KpiGrid>
-      <Card className="mt-4">
+      <Card className="mt-4 overflow-x-auto">
         <CardHeader><CardTitle>Platform comparison</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable columns={cols} rows={totals} state={{ ns: "", total: 0, perPage: 20, page: 1, pages: 1, offset: 0, sort: "", dir: "desc", sortable: [], params: sp }} caption="Platform comparison" empty="No social data yet." />
+        <CardContent className="px-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border text-left text-muted-foreground">
+                <th className="px-4 py-2 font-semibold">Platform</th>
+                <th className="px-4 py-2 text-right font-semibold">Followers</th>
+                <th className="px-4 py-2 text-right font-semibold">Impr.</th>
+                <th className="px-4 py-2 text-right font-semibold">Engagements</th>
+                <th className="px-4 py-2 text-right font-semibold">Eng. rate</th>
+                <th className="px-4 py-2 text-right font-semibold">Clicks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {totals.length === 0 ? (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">No social data yet — add it from the manage panel.</td></tr>
+              ) : (
+                totals.map((x) => (
+                  <tr key={String(x.platform)} className="border-b border-border/60 last:border-0 hover:bg-muted/30">
+                    <td className="px-4 py-2"><Link href={buildHref(sp, { platform: String(x.platform) })} className="font-medium text-primary hover:underline">{PLATFORMS[String(x.platform)] ?? String(x.platform)}</Link></td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(Number(x.followers))}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(Number(x.impressions))}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(Number(x.engagements))}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{Number(x.impressions) ? fmtPct((Number(x.engagements) / Number(x.impressions)) * 100) : "—"}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtNum(Number(x.clicks))}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
     </>
   );
 }
 
-function PlatformView({ platform, sp, start, end, totals }: { platform: string; sp: SearchParams; start: string; end: string; totals?: Row }) {
-  const series = socialSeries(platform, start, end) as Row[];
+function PlatformView({ platform, totals }: { platform: string; sp: SearchParams; totals?: Row }) {
+  const series = socialSeries(platform, ALL_START, ALL_END) as Row[];
   const posts = socialPosts(platform) as Row[];
   const isYt = platform === "youtube";
 
-  const dataTable = paginateRows(series, { sortable: ["date", "followers", "impressions", "engagements", "clicks", "video_views"], defaultSort: "date", ns: "sd", params: sp });
-  const postsTable = paginateRows(posts, { sortable: ["posted_at", "title", "impressions", "engagements", "clicks", "video_views"], defaultSort: "posted_at", ns: "sp", params: sp });
-
-  const dataCols: Column<Row>[] = [
-    { key: "date", label: "Date", sortable: true, render: (x) => String(x.date) },
-    { key: "followers", label: "Followers", align: "right", sortable: true, render: (x) => fmtNum(Number(x.followers)) },
-    { key: "impressions", label: "Impr.", align: "right", sortable: true, render: (x) => fmtNum(Number(x.impressions)) },
-    { key: "engagements", label: "Engagements", align: "right", sortable: true, render: (x) => fmtNum(Number(x.engagements)) },
-    { key: "clicks", label: "Clicks", align: "right", sortable: true, render: (x) => fmtNum(Number(x.clicks)) },
-    { key: "video_views", label: "Views", align: "right", sortable: true, render: (x) => fmtNum(Number(x.video_views)) },
-  ];
-  const postCols: Column<Row>[] = [
-    { key: "posted_at", label: "Date", sortable: true, render: (x) => String(x.posted_at) },
-    { key: "title", label: "Post", sortable: true, render: (x) => <a href={String(x.url)} target="_blank" rel="noopener" className="line-clamp-1 text-primary hover:underline">{String(x.title)}</a> },
-    { key: "impressions", label: "Impr.", align: "right", sortable: true, render: (x) => fmtNum(Number(x.impressions)) },
-    { key: "engagements", label: "Eng.", align: "right", sortable: true, render: (x) => fmtNum(Number(x.engagements)) },
-    { key: "clicks", label: "Clicks", align: "right", sortable: true, render: (x) => fmtNum(Number(x.clicks)) },
-    ...(isYt ? [{ key: "video_views", label: "Views", align: "right" as const, sortable: true, render: (x: Row) => fmtNum(Number(x.video_views)) }] : []),
-  ];
+  const postMonths = groupByMonth(posts, (p) => p.posted_at);
 
   return (
     <>
@@ -122,22 +121,80 @@ function PlatformView({ platform, sp, start, end, totals }: { platform: string; 
         <KpiCard label="Engagements" value={fmtNum(Number(totals?.engagements ?? 0))} />
         <KpiCard label={isYt ? "Video views" : "Link clicks"} value={fmtNum(Number(totals?.[isYt ? "video_views" : "clicks"] ?? 0))} />
       </KpiGrid>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Follower growth" type="area" data={series} xKey="date" series={[{ key: "followers", label: "Followers" }]} />
-        <ChartCard title="Impressions & engagements" data={series} xKey="date" series={[{ key: "impressions", label: "Impressions" }, { key: "engagements", label: "Engagements" }]} />
-      </div>
-      <Card className="mt-4">
-        <CardHeader><CardTitle>Recorded data points</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable columns={dataCols} rows={dataTable.rows} state={dataTable.state} caption="Recorded data points" empty="No records in this range." />
-        </CardContent>
-      </Card>
-      <Card className="mt-4">
-        <CardHeader><CardTitle>Recent posts</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable columns={postCols} rows={postsTable.rows} state={postsTable.state} caption="Recent posts" empty="No posts tracked yet for this platform." />
-        </CardContent>
-      </Card>
+
+      <h2 className="mb-2 mt-6 text-sm font-semibold text-foreground">Posts by month</h2>
+      {posts.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-muted-foreground">No posts tracked yet for this platform — add them from the manage panel.</Card>
+      ) : (
+        <div className="space-y-6">
+          {postMonths.map(({ ym, rows }) => (
+            <section key={ym} aria-label={monthLabel(ym)}>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h3 className="text-sm font-semibold text-foreground">{monthLabel(ym)}</h3>
+                <span className="text-xs text-muted-foreground">{rows.length} posts</span>
+              </div>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="px-3 py-2 font-semibold">Date</th>
+                      <th className="px-3 py-2 font-semibold">Post</th>
+                      <th className="px-3 py-2 text-right font-semibold">Impr.</th>
+                      <th className="px-3 py-2 text-right font-semibold">Eng.</th>
+                      <th className="px-3 py-2 text-right font-semibold">Clicks</th>
+                      {isYt && <th className="px-3 py-2 text-right font-semibold">Views</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((x) => (
+                      <tr key={String(x.id)} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
+                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{String(x.posted_at ?? "—")}</td>
+                        <td className="px-3 py-2"><a href={String(x.url)} target="_blank" rel="noopener" className="line-clamp-1 max-w-[26rem] text-primary hover:underline">{String(x.title)}</a></td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.impressions))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.engagements))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.clicks))}</td>
+                        {isYt && <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.video_views))}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {series.length > 0 && (
+        <>
+          <h2 className="mb-2 mt-8 text-sm font-semibold text-foreground">Account metrics by month</h2>
+          <Card className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="px-3 py-2 font-semibold">Date</th>
+                  <th className="px-3 py-2 text-right font-semibold">Followers</th>
+                  <th className="px-3 py-2 text-right font-semibold">Impr.</th>
+                  <th className="px-3 py-2 text-right font-semibold">Engagements</th>
+                  <th className="px-3 py-2 text-right font-semibold">Clicks</th>
+                  <th className="px-3 py-2 text-right font-semibold">Views</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...series].reverse().map((x) => (
+                  <tr key={String(x.id)} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
+                    <td className="whitespace-nowrap px-3 py-2 tabular-nums">{String(x.date ?? "—")}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.followers))}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.impressions))}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.engagements))}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.clicks))}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.video_views))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
+      )}
     </>
   );
 }

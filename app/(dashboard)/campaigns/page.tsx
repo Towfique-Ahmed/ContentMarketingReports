@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { RangePicker } from "@/components/layout/range-picker";
-import { KpiCard, KpiGrid } from "@/components/reports/kpi-card";
-import { DataTable, type Column } from "@/components/reports/data-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRange } from "@/lib/params";
-import { paginateRows, type SearchParams } from "@/lib/paginate";
-import { fmtMoney, fmtNum, fmtPct } from "@/lib/format";
-import { campaignTable } from "@/lib/reports/queries";
+import { Card } from "@/components/ui/card";
+import { fmtMoney, fmtNum } from "@/lib/format";
+import { campaignAll } from "@/lib/reports/queries";
 import { ensureDb } from "@/lib/db/client";
+import { groupByMonth, monthLabel } from "@/lib/month";
 import { ManagePanel } from "@/components/manage/manage-panel";
 
 export const metadata: Metadata = { title: "Campaigns" };
@@ -21,58 +17,73 @@ const STATUS_TONE: Record<string, string> = {
   planned: "text-chart-1",
 };
 
-export default async function CampaignsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+function cap(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+}
+
+export default async function CampaignsPage() {
   ensureDb();
-  const sp = await searchParams;
-  const r = getRange(sp);
-  const rows = campaignTable(r.start, r.end) as Row[];
-
-  const cost = rows.reduce((a, x) => a + Number(x.cost), 0);
-  const revenue = rows.reduce((a, x) => a + Number(x.revenue), 0);
-  const conv = rows.reduce((a, x) => a + Number(x.conversions), 0);
-
-  const table = paginateRows(rows, {
-    sortable: ["name", "channel", "status", "start_date", "budget", "cost", "impressions", "clicks", "conversions", "revenue"],
-    defaultSort: "revenue",
-    params: sp,
-  });
-
-  const cols: Column<Row>[] = [
-    { key: "name", label: "Campaign", sortable: true, render: (x) => <span className="line-clamp-1">{String(x.name)}</span> },
-    { key: "channel", label: "Channel", sortable: true, render: (x) => String(x.channel) },
-    { key: "status", label: "Status", sortable: true, render: (x) => <span className={`text-xs font-semibold ${STATUS_TONE[String(x.status)] ?? ""}`}>{cap(String(x.status))}</span> },
-    { key: "budget", label: "Budget", align: "right", sortable: true, render: (x) => fmtMoney(Number(x.budget)) },
-    { key: "cost", label: "Spend", align: "right", sortable: true, render: (x) => fmtMoney(Number(x.cost)) },
-    { key: "clicks", label: "Clicks", align: "right", sortable: true, render: (x) => fmtNum(Number(x.clicks)) },
-    { key: "conversions", label: "Conv.", align: "right", sortable: true, render: (x) => fmtNum(Number(x.conversions)) },
-    { key: "cpa", label: "CPA", align: "right", render: (x) => (Number(x.conversions) ? fmtMoney(Number(x.cost) / Number(x.conversions)) : "—") },
-    { key: "revenue", label: "Revenue", align: "right", sortable: true, render: (x) => fmtMoney(Number(x.revenue)) },
-    { key: "roas", label: "ROAS", align: "right", render: (x) => (Number(x.cost) ? (Number(x.revenue) / Number(x.cost)).toFixed(1) + "x" : "—") },
-  ];
+  const rows = campaignAll() as Row[];
+  const months = groupByMonth(rows, (r) => r.start_date);
+  const revenue = rows.reduce((a, x) => a + Number(x.revenue ?? 0), 0);
 
   return (
     <>
-      <PageHeader title="Campaign Reports" description={r.label}>
-        <RangePicker />
-      </PageHeader>
-      <KpiGrid>
-        <KpiCard label="Total spend" value={fmtMoney(cost)} />
-        <KpiCard label="Total revenue" value={fmtMoney(revenue)} />
-        <KpiCard label="Blended ROAS" value={cost ? (revenue / cost).toFixed(2) + "x" : "—"} />
-        <KpiCard label="Cost / conversion" value={conv ? fmtMoney(cost / conv) : "—"} />
-      </KpiGrid>
-      <Card className="mt-4">
-        <CardHeader><CardTitle>All campaigns</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable columns={cols} rows={table.rows} state={table.state} caption="All campaigns" empty="No campaigns yet — add them from the manage panel." />
-        </CardContent>
-      </Card>
+      <PageHeader
+        title="Campaign Reports"
+        description={`${rows.length} campaigns · ${fmtMoney(revenue)} revenue · grouped by month`}
+      />
+
+      {rows.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-muted-foreground">
+          No campaigns tracked yet. Add campaigns and their metrics in the manage panel below.
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {months.map(({ ym, rows: group }) => (
+            <section key={ym} aria-label={ym === "0000-00" ? "No start date" : monthLabel(ym)}>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold text-foreground">{ym === "0000-00" ? "No start date" : monthLabel(ym)}</h2>
+                <span className="text-xs text-muted-foreground">{group.length} campaigns</span>
+              </div>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="px-3 py-2 font-semibold">Started</th>
+                      <th className="px-3 py-2 font-semibold">Campaign</th>
+                      <th className="px-3 py-2 font-semibold">Channel</th>
+                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2 text-right font-semibold">Spend</th>
+                      <th className="px-3 py-2 text-right font-semibold">Clicks</th>
+                      <th className="px-3 py-2 text-right font-semibold">Conv.</th>
+                      <th className="px-3 py-2 text-right font-semibold">Revenue</th>
+                      <th className="px-3 py-2 text-right font-semibold">ROAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.map((x) => (
+                      <tr key={String(x.id)} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
+                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{String(x.start_date ?? "—")}</td>
+                        <td className="px-3 py-2"><span className="line-clamp-1 max-w-[22rem] font-medium">{String(x.name)}</span></td>
+                        <td className="whitespace-nowrap px-3 py-2">{String(x.channel ?? "—")}</td>
+                        <td className="px-3 py-2"><span className={`font-semibold ${STATUS_TONE[String(x.status)] ?? ""}`}>{cap(String(x.status ?? ""))}</span></td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(Number(x.cost))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.clicks))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtNum(Number(x.conversions))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(Number(x.revenue))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{Number(x.cost) ? (Number(x.revenue) / Number(x.cost)).toFixed(1) + "x" : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </section>
+          ))}
+        </div>
+      )}
 
       <ManagePanel pageKey="campaigns" />
     </>
   );
-}
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

@@ -20,6 +20,31 @@ chart has a keyboard-accessible “view as table” fallback, and the whole app
 targets WCAG 2.2 AA (semantic landmarks, visible focus, no color-only signals,
 `prefers-reduced-motion`).
 
+## Make it yours
+
+Everything under **Settings → Appearance & branding** applies instantly across
+the whole app (sidebar, top bar, page titles, even the Claude OAuth screen):
+
+- **Logo** — upload a PNG/SVG/JPG/WebP (max 300 KB); it replaces the letter
+  mark in the sidebar and top bar. Remove it anytime.
+- **Site / team name** — shown next to the logo and used in every page title.
+- **Accent color** — pick a preset swatch or any custom color; buttons, links,
+  focus rings, and the active nav item recolor in both light and dark mode
+  (lightness is re-anchored per mode so contrast stays WCAG-safe).
+- **Font** — system default, Inter (bundled), Lora serif (bundled), Georgia,
+  or monospace.
+- **Corners & text size** — square → extra-round radius, compact → relaxed
+  density.
+
+Under **Settings → Sidebar & custom pages** you control the left nav:
+
+- **Show/hide built-in reports** — uncheck any channel or reporting page you
+  don’t use (Overview and Settings always stay).
+- **Add your own pages** — notes pages (with headings, lists, bold, links —
+  editable right on the page) or external links, each with its own icon,
+  order, and **category**: type a new category name and it becomes a new
+  sidebar group, or reuse “Channels” / “Reporting” to slot into those.
+
 ## Tech stack
 
 - **Next.js (App Router) + React + TypeScript** — server components for fast

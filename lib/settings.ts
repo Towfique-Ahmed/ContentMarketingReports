@@ -28,7 +28,7 @@ export const ALLOWED_SETTINGS = [
   "site_base_url", "content_path_rules", "content_type_map", "wp_username", "wp_app_password",
   "content_exclude_blog", "content_exclude_documentation",
   "content_exclude_landing_page", "content_exclude_case_study",
-  "brand_logo", "accent_color",
+  "brand_logo", "accent_color", "brand_font", "brand_radius", "brand_density", "nav_hidden",
   "google_service_account_json", "gsc_site_url", "ga4_property_id",
   "facebook_page_token", "facebook_page_id",
   "linkedin_access_token", "linkedin_org_urn",

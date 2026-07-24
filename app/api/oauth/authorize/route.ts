@@ -11,6 +11,8 @@ function esc(s: string): string {
 
 /** GET: render the approval page. The MCP token is the proof of authorization. */
 export function GET(req: NextRequest) {
+  ensureDb();
+  const siteName = esc(getSetting("site_name") || "Marketing Reports");
   const p = req.nextUrl.searchParams;
   const redirectUri = p.get("redirect_uri") ?? "";
   const challenge = p.get("code_challenge") ?? "";
@@ -19,7 +21,7 @@ export function GET(req: NextRequest) {
 
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Authorize Claude · Analytio</title>
+<title>Authorize Claude · ${siteName}</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -34,7 +36,7 @@ export function GET(req: NextRequest) {
   .hint { font-size:12px; color:#9aa0aa; margin-top:14px; }
 </style></head><body>
 <form class="card" method="post" action="/api/oauth/authorize">
-  <h1>Connect Claude to Analytio</h1>
+  <h1>Connect Claude to ${siteName}</h1>
   <p>Paste your <strong>MCP token</strong> (Settings → Claude MCP connector) to authorize this connection.</p>
   <label for="tok">MCP token</label>
   <input id="tok" name="mcp_token" type="password" autocomplete="off" autofocus required>

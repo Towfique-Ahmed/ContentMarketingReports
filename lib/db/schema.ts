@@ -245,6 +245,19 @@ export const monthlyNotes = sqliteTable("monthly_notes", {
   note: text("note"),
 });
 
+/** User-created sidebar pages: free-form notes pages or external links. */
+export const customPages = sqliteTable("custom_pages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  section: text("section"), // sidebar group label; empty = "My pages"
+  icon: text("icon").default("file-text"),
+  kind: text("kind").default("notes"), // notes | link
+  url: text("url"),
+  content: text("content"),
+  position: integer("position").default(0),
+});
+
 export const syncLog = sqliteTable("sync_log", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   source: text("source").notNull(),

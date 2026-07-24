@@ -3,6 +3,32 @@
 @tailwind utilities;
 
 /*
+ * Bundled fonts (OFL licensed), selectable in Settings → Appearance. Variable
+ * weight, latin subset; browsers only download the face the UI actually uses.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-var-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/lora-var-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lora";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/lora-italic-var-latin.woff2") format("woff2");
+}
+
+/*
  * Design tokens. Every color is an HSL triplet so Tailwind can apply opacity.
  * Light and dark are both first-class; contrast targets WCAG AA (>=4.5:1 for
  * text). Chart series are refined in Phase 2 with the dataviz skill.

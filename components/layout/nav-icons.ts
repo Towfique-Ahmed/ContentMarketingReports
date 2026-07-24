@@ -1,0 +1,63 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  BookOpen,
+  CalendarRange,
+  ClipboardList,
+  DollarSign,
+  FileText,
+  Flag,
+  Folder,
+  GitCompareArrows,
+  Globe,
+  Heart,
+  LayoutDashboard,
+  Lightbulb,
+  Link2,
+  Mail,
+  Megaphone,
+  PenLine,
+  Rocket,
+  Search,
+  Settings,
+  Share2,
+  Star,
+  Tags,
+  Target,
+  Users,
+} from "lucide-react";
+
+/** Resolve serializable icon keys (lib/nav.ts) to Lucide components. */
+const ICONS: Record<string, LucideIcon> = {
+  "layout-dashboard": LayoutDashboard,
+  "file-text": FileText,
+  search: Search,
+  tags: Tags,
+  "share-2": Share2,
+  mail: Mail,
+  megaphone: Megaphone,
+  "calendar-range": CalendarRange,
+  "git-compare-arrows": GitCompareArrows,
+  settings: Settings,
+  star: Star,
+  folder: Folder,
+  link: Link2,
+  globe: Globe,
+  "book-open": BookOpen,
+  lightbulb: Lightbulb,
+  target: Target,
+  users: Users,
+  "bar-chart-3": BarChart3,
+  "dollar-sign": DollarSign,
+  bell: Bell,
+  flag: Flag,
+  heart: Heart,
+  rocket: Rocket,
+  "pen-line": PenLine,
+  "clipboard-list": ClipboardList,
+};
+
+export function navIcon(key: string): LucideIcon {
+  return ICONS[key] ?? FileText;
+}

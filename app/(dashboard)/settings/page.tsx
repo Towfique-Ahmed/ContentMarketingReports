@@ -3,7 +3,12 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm, SyncButton } from "@/components/manage/forms";
+import { AppearanceForm, LogoForm } from "@/components/manage/appearance";
+import { CustomPagesManager, NavVisibilityForm } from "@/components/manage/custom-pages";
 import { ClearDataButton } from "@/components/manage/danger-zone";
+import { getBranding } from "@/lib/branding";
+import { getCustomPages, getHiddenNavKeys } from "@/lib/nav-data";
+import { HIDEABLE_NAV } from "@/lib/nav";
 import { getSetting } from "@/lib/settings";
 import { SYNC_LABELS, SYNC_SOURCES } from "@/lib/sync/runner";
 import { sqlite } from "@/lib/db/client";
@@ -16,7 +21,6 @@ const GENERAL: SettingField[] = [
   { name: "site_name", label: "Site / team name" },
   { name: "timezone", label: "Timezone", placeholder: "UTC, Asia/Dhaka, America/New_York…" },
   { name: "sync_time", label: "Daily sync time (HH:MM)", placeholder: "06:00" },
-  { name: "accent_color", label: "Accent color (hex)", placeholder: "#2a78d6" },
   { name: "cron_token", label: "Web-cron token" },
   { name: "mcp_token", label: "MCP token" },
 ];
@@ -63,6 +67,13 @@ export default async function SettingsPage() {
   ensureDb();
   const host = (await headers()).get("host") ?? "your-domain";
   const mcpToken = getSetting("mcp_token") ?? "";
+  const branding = getBranding();
+  const customPages = getCustomPages().map((p) => ({
+    id: p.id, title: p.title, slug: p.slug, section: p.section,
+    icon: p.icon, kind: p.kind, url: p.url, content: p.content, position: p.position,
+  }));
+  const customSections = [...new Set(customPages.map((p) => (p.section ?? "").trim() || "My pages"))];
+  const hiddenNav = [...getHiddenNavKeys()];
   const log = sqlite.prepare("SELECT source, ran_at, status, message FROM sync_log ORDER BY id DESC LIMIT 20").all() as {
     source: string;
     ran_at: string;
@@ -75,6 +86,39 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" description="Connections, sync, and data management." />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance &amp; branding</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <LogoForm logo={branding.logo} siteName={branding.siteName} />
+            <AppearanceForm
+              values={{
+                accent_color: branding.accent ?? "",
+                brand_font: branding.font,
+                brand_radius: branding.radius,
+                brand_density: branding.density,
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sidebar &amp; custom pages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Built-in reports shown in the sidebar</h3>
+              <NavVisibilityForm items={HIDEABLE_NAV} hidden={hiddenNav} />
+            </div>
+            <div className="space-y-2 border-t border-border pt-4">
+              <h3 className="text-sm font-medium">Your pages &amp; categories</h3>
+              <CustomPagesManager pages={customPages} sections={customSections} />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle>General</CardTitle></CardHeader>
           <CardContent><SettingsForm fields={GENERAL} values={values(GENERAL)} /></CardContent>

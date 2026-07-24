@@ -3,11 +3,13 @@
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import type { NavSection } from "@/lib/nav";
 import { SidebarNav } from "./sidebar";
+import type { BrandInfo } from "./brand";
 import { Button } from "@/components/ui/button";
 
 /** Off-canvas sidebar for small screens. */
-export function MobileNav() {
+export function MobileNav({ brand, sections }: { brand: BrandInfo; sections: NavSection[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -40,7 +42,7 @@ export function MobileNav() {
                 <X aria-hidden />
               </Button>
             </div>
-            <SidebarNav onNavigate={() => setOpen(false)} />
+            <SidebarNav brand={brand} sections={sections} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

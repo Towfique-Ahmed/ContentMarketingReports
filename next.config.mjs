@@ -4,6 +4,10 @@ const nextConfig = {
   // conflicts with `next start` and adds a memory-heavy trace step to the build.
   // better-sqlite3 is a native module — keep it external to the server bundle.
   serverExternalPackages: ["better-sqlite3"],
+  // scripts/deploy-xcloud.sh builds into a scratch dir and promotes it only on
+  // success, so an OOM-killed build can't leave a half-written .next that
+  // crash-loops `next start` (the recurring 502 on small hosts).
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   eslint: { ignoreDuringBuilds: true },
   // Type-check runs in CI / `npm run typecheck`; skip it during the production
   // build so low-RAM hosts don't OOM running tsc alongside the compiler.

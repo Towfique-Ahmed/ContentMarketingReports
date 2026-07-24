@@ -130,6 +130,32 @@ The SQLite file lives in the mounted `/data` volume. Or run on any Node 22 host:
 npm run build && npm start
 ```
 
+### xCloud / PM2 (small instances)
+
+Low-RAM hosts have repeatedly OOM-killed the naive `npm ci && npm run build`
+deploy, leaving a broken `.next` that crash-loops `next start` → **502**. Use
+the bundled resilient deploy script as the site's deploy command instead:
+
+```bash
+bash scripts/deploy-xcloud.sh
+```
+
+It stops the app before installing/building (frees its RAM), installs
+incrementally, builds with a capped Node heap (`BUILD_MAX_OLD_SPACE`, default
+768 MB), and promotes the build atomically — **if the build fails, the previous
+working build is restarted, so a bad deploy can't take the site down**.
+
+Two environment variables matter on the host (xCloud site → Environment):
+
+- `PORT` — must match the port the site's nginx proxies to.
+- `DATABASE_PATH` — point it **outside the repo directory** (e.g.
+  `/home/<site-user>/data/app.sqlite`). If it lives in the repo, a re-clone
+  deploy wipes your report data, settings, logo, and custom pages.
+
+If a deploy still 502s, check `pm2 logs` and the xCloud deployment log — an
+install/build line ending in `Killed` means the instance ran out of memory
+(add swap or a bigger plan; the heap cap makes this rare).
+
 Prefer Postgres for serverless? The Drizzle schema swaps with minimal change.
 
 ## Project layout
